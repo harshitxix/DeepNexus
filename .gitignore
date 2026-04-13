@@ -1,0 +1,28 @@
+# Python cache and virtual environments
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Environment files
+.env
+*.env
+
+# Node/Vite build artifacts
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+
+# Logs and OS files
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE and tool caches
+.vscode/
+.idea/
+.pytest_cache/
+.mypy_cache/

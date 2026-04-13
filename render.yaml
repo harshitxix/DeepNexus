@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: deepnexus-backend
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: true
+      - key: PYTHONPATH
+        value: /backend
+    scaling:
+      minInstances: 1
+      maxInstances: 3
+    healthCheckPath: /api/health
+    
+  - type: static
+    name: deepnexus-frontend
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: deepnexus-backend
+          property: url

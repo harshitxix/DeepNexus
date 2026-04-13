@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "buildCommand": "cd frontend && npm run build",
+  "outputDirectory": "frontend/dist",
+  "installCommand": "npm install",
+  "env": {
+    "VITE_API_URL": {
+      "default": "http://localhost:8000"
+    }
+  },
+  "functions": {
+    "api/**/*.js": {
+      "memory": 1024
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://your-backend-url.com/api/$1"
+    }
+  ]
+}
