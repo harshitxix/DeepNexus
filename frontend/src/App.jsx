@@ -1,13 +1,48 @@
-import { Component, useEffect, useMemo, useRef, useState } from 'react'
+import { Component, Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import PlotlyImport from 'plotly.js-dist-min'
 import animationVideo from './assets/animations/138962-770800093.mp4'
 import ShinyText from './ShinyText'
 import StaggeredMenu from './StaggeredMenu'
 import ElasticSlider from './ElasticSlider'
 import PillNav from './PillNav'
+import ScrollReveal from './ScrollReveal'
+import QuizPage from './QuizPage'
+import DataEnginePage from './DataEnginePage'
+import { getQuizProgressMap, loadQuizProgress, upsertQuizProgress } from './quizStorage'
 import { api } from './api'
+import 'katex/dist/katex.min.css'
 
 const Plotly = PlotlyImport?.default || PlotlyImport
+
+function toSentenceCaseHeading(value) {
+  if (typeof value !== 'string') return value
+  const text = value.trim()
+  if (!text) return text
+  const firstLetterIndex = text.search(/[A-Za-z]/)
+  if (firstLetterIndex < 0) return text
+
+  const sentenceCased = `${text.slice(0, firstLetterIndex)}${text[firstLetterIndex].toUpperCase()}${text.slice(firstLetterIndex + 1)}`
+
+  const normalizedAcronyms = [
+    ['cnn', 'CNN'],
+    ['rnn', 'RNN'],
+    ['mlp', 'MLP'],
+    ['dbn', 'DBN'],
+    ['rbm', 'RBM'],
+    ['lstm', 'LSTM'],
+    ['gru', 'GRU'],
+    ['nlp', 'NLP'],
+    ['api', 'API'],
+    ['xor', 'XOR'],
+    ['relu', 'ReLU'],
+    ['grad-cam', 'Grad-CAM'],
+  ]
+
+  return normalizedAcronyms.reduce((result, [needle, replacement]) => {
+    const pattern = new RegExp(`\\b${needle}\\b`, 'gi')
+    return result.replace(pattern, replacement)
+  }, sentenceCased)
+}
 
 function Plot({ data, layout, config, style }) {
   const plotRef = useRef(null)
@@ -41,6 +76,7 @@ const MODULES = [
   'RNN Lab',
   'Hopfield Network',
   'Study Mode',
+  'Data Engine',
 ]
 
 const MODULE_DESCRIPTIONS = {
@@ -49,11 +85,13 @@ const MODULE_DESCRIPTIONS = {
   'CNN Lab': 'Image classification, feature maps, and Grad-CAM explainability with pretrained CNNs.',
   'RNN Lab': 'Shared-input NLP lab with LSTM-style next-word generation and BERT-based emotion analysis.',
   'Hopfield Network': 'Mouse-draw character recall using associative memory over 0-9, a-z, and A-Z patterns.',
-  'Study Mode': 'Concept map and guided checkpoints across all DeepNexus modules.',
+  'Study Mode': 'Concept maps, guided checkpoints, and an embedded NexusAI study assistant for module review.',
+  'Data Engine': 'Upload CSV files, auto-detect target columns, perform AI-powered analysis with feature engineering, preprocessing, and model recommendations.',
 }
 
 const MENU_ITEMS = MODULES.map((moduleName) => ({ label: moduleName, moduleName }))
-const GITHUB_URL = 'https://github.com/'
+const GITHUB_URL = 'https://github.com/harshitxix/DeepNexus'
+const DEVELOPER_URL = 'https://github.com/harshitxix'
 
 const ACTIVATIONS = {
   Sigmoid: (z) => 1 / (1 + Math.exp(-Math.max(-500, Math.min(500, z)))),
@@ -404,27 +442,465 @@ function NeuralNetworkAnimation() {
   )
 }
 
-function HomePage({ menuOpen, onToggleMenu, onMenuSelect }) {
+function NeuralOrbitLoader() {
+  return (
+    <div className="neural-orbit-loader" aria-hidden="true">
+      <div className="neural-orbit-core">
+        <svg viewBox="0 0 100 100" className="neural-orbit-svg">
+          <ellipse cx="50" cy="50" rx="40" ry="18" stroke="url(#orbit-grad)" strokeWidth="1" fill="none" />
+          <ellipse
+            cx="50"
+            cy="50"
+            rx="25"
+            ry="40"
+            stroke="url(#orbit-grad)"
+            strokeWidth="2"
+            fill="none"
+            transform="rotate(45 50 50)"
+          />
+          <defs>
+            <linearGradient id="orbit-grad">
+              <stop offset="0%" stopColor="#6366f1" />
+              <stop offset="100%" stopColor="#8b5cf6" />
+            </linearGradient>
+          </defs>
+        </svg>
+
+        <div className="neural-orbit-spin-wrap">
+          <div className="neural-orbit-neuron-wrap">
+            <div className="neural-orbit-neuron" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function HomePage({ onMenuSelect, quizProgressMap }) {
+  const [moduleTab, setModuleTab] = useState('current')
+
+  const handleSetModuleTab = (tab) => {
+    setModuleTab(tab)
+
+    // After the tab state change, refresh GSAP ScrollTrigger and clear blur/opacity
+    setTimeout(() => {
+      try {
+        if (window.gsap && window.gsap.core && window.gsap.core.globals && window.gsap.core.globals.ScrollTrigger) {
+          window.gsap.core.globals.ScrollTrigger.refresh()
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      const grid = document.querySelector('.home-module-grid.active')
+      if (grid) {
+        const reveals = grid.querySelectorAll('.scroll-reveal')
+        reveals.forEach((el) => {
+          el.style.opacity = '1'
+          el.style.filter = 'none'
+          const words = el.querySelectorAll('.word')
+          words.forEach((w) => {
+            w.style.opacity = '1'
+            w.style.filter = 'none'
+          })
+        })
+      }
+    }, 80)
+  }
+
+  const currentModules = [
+    { name: 'Perceptron', moduleName: 'Perceptron', detail: 'Foundational binary classification and decision boundaries.' },
+    {
+      name: 'Neural Flow Engine',
+      moduleName: 'Neural Flow Engine',
+      detail: 'Forward pass, loss flow, backprop, and weight update cycle.',
+    },
+    { name: 'CNN Lab', moduleName: 'CNN Lab', detail: 'Classification, feature maps, and Grad-CAM interpretability.' },
+    { name: 'RNN Lab', moduleName: 'RNN Lab', detail: 'Sequence generation and emotion-aware text analysis.' },
+    { name: 'Hopfield Network', moduleName: 'Hopfield Network', detail: 'Associative memory recall from noisy patterns.' },
+    { name: 'Study Mode', moduleName: 'Study Mode', detail: 'Concept maps, guided checkpoints, and NexusAI study support.' },
+    { name: 'Data Engine', moduleName: 'Data Engine', detail: 'CSV upload, target auto-detection, AI-first analysis, and interactive data exploration.' },
+  ]
+
+  const futureModules = [
+    { name: 'OpenCV Vision Studio', detail: 'Classical computer vision pipeline and image processing workflows.' },
+    { name: 'DBN Playground', detail: 'Deep Belief Network pretraining and hierarchical feature learning.' },
+    { name: 'Autoencoder Lab', detail: 'Latent-space compression, denoising, and representation learning.' },
+    { name: 'GAN Studio', detail: 'Generator-discriminator training dynamics and sample quality tracking.' },
+    { name: 'Transformer Workbench', detail: 'Attention maps, token flow, and architecture experimentation.' },
+  ]
+
   return (
     <div className="home-page">
-      <NeuralNetworkAnimation />
-      <div className="home-menu-anchor">
-        <StaggeredMenu items={MENU_ITEMS} isOpen={menuOpen} onToggle={onToggleMenu} onItemClick={onMenuSelect} />
-      </div>
-      <div className={menuOpen ? 'hero-section home-content-shell menu-open' : 'hero-section home-content-shell'}>
-        <ShinyText
-          text="Build, Learn, and Experiment with Deep Learning - All in One Place"
-          className="hero-title"
-          color="#5227ff"
-          shineColor="#8080ff"
-          speed={3}
-          spread={100}
-        />
-        <p className="hero-subtext">
-          DeepNexus is an interactive deep learning workspace where you can run, visualize, and understand core neural
-          network modules in one place.
-        </p>
-      </div>
+      <section className="home-hero" id="home-hero">
+        <NeuralNetworkAnimation />
+        <div className="hero-section home-content-shell">
+          <p className="hero-kicker">Interactive Deep Learning Studio</p>
+          <ShinyText
+            text="Build, learn, and experiment with deep learning in one connected workspace"
+            className="hero-title"
+            color="#ffffff"
+            shineColor="#d6caff"
+            speed={3}
+            spread={100}
+          />
+          <p className="hero-subtext">
+            DeepNexus combines guided theory, visual simulators, and live experimentation so you can understand models
+            faster and move from concept to intuition with confidence.
+          </p>
+          <div className="hero-actions">
+            <button type="button" className="hero-action-btn primary" onClick={() => onMenuSelect?.({ moduleName: 'Study Mode' })}>
+              Start In Study Mode
+            </button>
+            <button type="button" className="hero-action-btn primary" onClick={() => onMenuSelect?.({ moduleName: 'Perceptron' })}>
+              Explore Perceptron Lab
+            </button>
+          </div>
+          <div className="hero-proof-row" aria-label="DeepNexus highlights">
+            <span>7 core modules</span>
+            <span>Live visual experiments</span>
+            <span>AI tutor with memory</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="home-insights">
+        <div className="home-insight-block home-intro-copy-only">
+          <ScrollReveal
+            as="h2"
+            textAs="span"
+            containerClassName="home-scroll-reveal home-scroll-reveal-heading"
+            textClassName="home-scroll-reveal-heading-text"
+            baseRotation={0}
+            baseOpacity={0.16}
+            blurStrength={0.5}
+            enableBlur
+          >
+            A Productive Learning Workflow, Not Just A Demo
+          </ScrollReveal>
+          <ScrollReveal
+            as="div"
+            textAs="p"
+            containerClassName="home-scroll-reveal"
+            textClassName="home-scroll-reveal-copy"
+            baseRotation={0}
+            baseOpacity={0.12}
+            blurStrength={0.3}
+            enableBlur
+          >
+            DeepNexus is built for momentum: understand concepts, test model behavior, and iterate with confidence in one
+            place. The interface keeps theory and experimentation tightly connected, so every action improves your mental
+            model instead of fragmenting it.
+          </ScrollReveal>
+          <ScrollReveal
+            as="div"
+            textAs="p"
+            containerClassName="home-scroll-reveal"
+            textClassName="home-scroll-reveal-copy"
+            baseRotation={0}
+            baseOpacity={0.12}
+            blurStrength={0.3}
+            enableBlur
+          >
+            Use guided labs, visual outputs, and contextual explanations together. Whether you are validating a loss
+            curve or exploring architecture behavior, the workflow stays clear, fast, and focused.
+          </ScrollReveal>
+          <div className="home-trust-row">
+            <span>Structured theory</span>
+            <span>Interactive simulation</span>
+            <span>Contextual tutor</span>
+          </div>
+        </div>
+
+        <div className="home-insight-block home-modules-block" id="home-modules">
+          <div className="home-modules-head">
+            <ScrollReveal
+              as="h2"
+              textAs="span"
+              containerClassName="home-scroll-reveal home-scroll-reveal-heading"
+              textClassName="home-scroll-reveal-heading-text"
+              baseRotation={0}
+              baseOpacity={0.16}
+              blurStrength={0.5}
+              enableBlur
+            >
+              Modules
+            </ScrollReveal>
+            <ScrollReveal
+              as="div"
+              textAs="p"
+              containerClassName="home-scroll-reveal"
+              textClassName="home-scroll-reveal-copy"
+              baseRotation={0}
+              baseOpacity={0.12}
+              blurStrength={0.3}
+              enableBlur
+            >
+              Explore what is live now and what is coming next in the DeepNexus roadmap.
+            </ScrollReveal>
+            <div className="home-modules-toggle" role="tablist" aria-label="Modules timeline">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={moduleTab === 'current'}
+                className={moduleTab === 'current' ? 'home-modules-toggle-btn active' : 'home-modules-toggle-btn'}
+                onClick={() => handleSetModuleTab('current')}
+              >
+                Current
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={moduleTab === 'future'}
+                className={moduleTab === 'future' ? 'home-modules-toggle-btn active' : 'home-modules-toggle-btn'}
+                onClick={() => handleSetModuleTab('future')}
+              >
+                Future
+              </button>
+            </div>
+          </div>
+
+          <div className="home-modules-stage">
+            <div className={moduleTab === 'current' ? 'home-module-grid active' : 'home-module-grid hidden'}>
+              {currentModules.map((item) => {
+                const quizRecord = quizProgressMap?.[item.moduleName]
+                const isCompleted = Boolean(quizRecord?.completed)
+
+                return (
+                  <article key={item.name} className="home-module-tile">
+                  <div className="home-module-tile-head">
+                    <div className="home-module-tile-title-wrap">
+                      <ScrollReveal
+                        as="h3"
+                        textAs="span"
+                        containerClassName="home-scroll-reveal home-scroll-reveal-card-title"
+                        textClassName="home-scroll-reveal-card-title-text"
+                        baseRotation={0}
+                        baseOpacity={0.18}
+                        blurStrength={0.2}
+                        enableBlur
+                      >
+                        {item.name}
+                      </ScrollReveal>
+                      <span className={isCompleted ? 'home-module-status completed' : 'home-module-status'}>
+                        {isCompleted ? 'Completed' : 'Quiz pending'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="home-module-launch"
+                      aria-label={`Open ${item.name}`}
+                      onClick={() => onMenuSelect?.({ moduleName: item.moduleName })}
+                    >
+                      →
+                    </button>
+                  </div>
+                  <ScrollReveal
+                    as="div"
+                    textAs="p"
+                    containerClassName="home-scroll-reveal"
+                    textClassName="home-scroll-reveal-card-copy"
+                    baseRotation={0}
+                    baseOpacity={0.14}
+                    blurStrength={0.2}
+                    enableBlur
+                  >
+                    {item.detail}
+                  </ScrollReveal>
+                  </article>
+                )
+              })}
+            </div>
+            <div className={moduleTab === 'future' ? 'home-module-grid active' : 'home-module-grid hidden'}>
+              {futureModules.map((item) => (
+                <article key={item.name} className="home-module-tile future">
+                  <ScrollReveal
+                    as="h3"
+                    textAs="span"
+                    containerClassName="home-scroll-reveal home-scroll-reveal-card-title"
+                    textClassName="home-scroll-reveal-card-title-text"
+                    baseRotation={0}
+                    baseOpacity={0.18}
+                    blurStrength={0.2}
+                    enableBlur
+                  >
+                    {item.name}
+                  </ScrollReveal>
+                  <ScrollReveal
+                    as="div"
+                    textAs="p"
+                    containerClassName="home-scroll-reveal"
+                    textClassName="home-scroll-reveal-card-copy"
+                    baseRotation={0}
+                    baseOpacity={0.14}
+                    blurStrength={0.2}
+                    enableBlur
+                  >
+                    {item.detail}
+                  </ScrollReveal>
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="home-insight-block home-nexusai-block" id="home-nexusai">
+          <div className="home-nexusai-head">
+            <img src="/nexusai.svg" alt="NexusAI" className="home-nexusai-logo" />
+            <div>
+              <ScrollReveal
+                as="h2"
+                textAs="span"
+                containerClassName="home-scroll-reveal home-scroll-reveal-heading"
+                textClassName="home-scroll-reveal-heading-text"
+                baseRotation={0}
+                baseOpacity={0.16}
+                blurStrength={0.5}
+                enableBlur
+              >
+                NexusAI, Explained Simply
+              </ScrollReveal>
+              <ScrollReveal
+                as="div"
+                textAs="p"
+                containerClassName="home-scroll-reveal"
+                textClassName="home-scroll-reveal-copy"
+                baseRotation={0}
+                baseOpacity={0.12}
+                blurStrength={0.3}
+                enableBlur
+              >
+                NexusAI is your built-in study assistant. It reads your question, identifies the most relevant neural
+                topic, and responds in clear steps with equations and grounded context.
+              </ScrollReveal>
+            </div>
+          </div>
+          <div className="home-nexusai-flow">
+            <article className="home-nexusai-step">
+              <ScrollReveal
+                as="h3"
+                textAs="span"
+                containerClassName="home-scroll-reveal home-scroll-reveal-card-title"
+                textClassName="home-scroll-reveal-card-title-text"
+                baseRotation={0}
+                baseOpacity={0.18}
+                blurStrength={0.2}
+                enableBlur
+              >
+                1. You ask naturally
+              </ScrollReveal>
+              <ScrollReveal
+                as="div"
+                textAs="p"
+                containerClassName="home-scroll-reveal"
+                textClassName="home-scroll-reveal-card-copy"
+                baseRotation={0}
+                baseOpacity={0.14}
+                blurStrength={0.2}
+                enableBlur
+              >
+                Ask in plain language, from basics like perceptrons to advanced topics like DBNs and sequence models.
+              </ScrollReveal>
+            </article>
+            <article className="home-nexusai-step">
+              <ScrollReveal
+                as="h3"
+                textAs="span"
+                containerClassName="home-scroll-reveal home-scroll-reveal-card-title"
+                textClassName="home-scroll-reveal-card-title-text"
+                baseRotation={0}
+                baseOpacity={0.18}
+                blurStrength={0.2}
+                enableBlur
+              >
+                2. It routes intelligently
+              </ScrollReveal>
+              <ScrollReveal
+                as="div"
+                textAs="p"
+                containerClassName="home-scroll-reveal"
+                textClassName="home-scroll-reveal-card-copy"
+                baseRotation={0}
+                baseOpacity={0.14}
+                blurStrength={0.2}
+                enableBlur
+              >
+                NexusAI maps your query to the right module context and keeps continuity with your active study session.
+              </ScrollReveal>
+            </article>
+            <article className="home-nexusai-step">
+              <ScrollReveal
+                as="h3"
+                textAs="span"
+                containerClassName="home-scroll-reveal home-scroll-reveal-card-title"
+                textClassName="home-scroll-reveal-card-title-text"
+                baseRotation={0}
+                baseOpacity={0.18}
+                blurStrength={0.2}
+                enableBlur
+              >
+                3. You get practical answers
+              </ScrollReveal>
+              <ScrollReveal
+                as="div"
+                textAs="p"
+                containerClassName="home-scroll-reveal"
+                textClassName="home-scroll-reveal-card-copy"
+                baseRotation={0}
+                baseOpacity={0.14}
+                blurStrength={0.2}
+                enableBlur
+              >
+                Responses are structured, concise or detailed on demand, and persist in chat history for 7 days.
+              </ScrollReveal>
+            </article>
+          </div>
+        </div>
+
+        <div className="home-insight-block home-about-block" id="home-about">
+          <ScrollReveal
+            as="h2"
+            textAs="span"
+            containerClassName="home-scroll-reveal home-scroll-reveal-heading"
+            textClassName="home-scroll-reveal-heading-text"
+            baseRotation={0}
+            baseOpacity={0.16}
+            blurStrength={0.5}
+            enableBlur
+          >
+            About DeepNexus
+          </ScrollReveal>
+          <ScrollReveal
+            as="div"
+            textAs="p"
+            containerClassName="home-scroll-reveal"
+            textClassName="home-scroll-reveal-copy"
+            baseRotation={0}
+            baseOpacity={0.12}
+            blurStrength={0.3}
+            enableBlur
+          >
+            DeepNexus is an interactive neural learning platform that combines deep learning theory, guided labs, and
+            contextual AI assistance in one clean experience built for clarity and experimentation.
+          </ScrollReveal>
+          <a className="home-about-github-tab" href={GITHUB_URL} target="_blank" rel="noreferrer">
+            View on GitHub
+          </a>
+        </div>
+      </section>
+
+      <footer className="home-footer">
+        <span className="home-footer-copy">© {new Date().getFullYear()} DeepNexus. All rights reserved.</span>
+        <span className="home-footer-sep" aria-hidden="true">
+          |
+        </span>
+        <a className="home-footer-repo" href={GITHUB_URL} target="_blank" rel="noreferrer">
+          Repository
+        </a>
+        <a className="home-footer-credit" href={DEVELOPER_URL} target="_blank" rel="noreferrer">
+          developed by harshitxix
+        </a>
+      </footer>
     </div>
   )
 }
@@ -432,7 +908,7 @@ function HomePage({ menuOpen, onToggleMenu, onMenuSelect }) {
 function Section({ title, children }) {
   return (
     <section className="module-line-section">
-      <h3>{title}</h3>
+      <h3>{toSentenceCaseHeading(title)}</h3>
       {children}
     </section>
   )
@@ -3699,15 +4175,89 @@ function HopfieldModule() {
   )
 }
 
-function StudyModeModule() {
+function StudyModeModule({ onStartQuiz }) {
+  const CHAT_STORAGE_KEY = 'deepnexus.study.assistant.chats.v1'
+  const CHAT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000
+
+  const createChatThreadRecord = (title = 'New chat') => ({
+    id: `chat-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    title,
+    sessionId: `study-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    updatedAt: Date.now(),
+    messages: [],
+  })
+
+  const loadInitialChatState = () => {
+    const fallback = createChatThreadRecord()
+    if (typeof window === 'undefined') {
+      return { threads: [fallback], activeId: fallback.id }
+    }
+
+    try {
+      const raw = window.localStorage.getItem(CHAT_STORAGE_KEY)
+      if (!raw) {
+        return { threads: [fallback], activeId: fallback.id }
+      }
+
+      const parsed = JSON.parse(raw)
+      const cutoff = Date.now() - CHAT_RETENTION_MS
+      const parsedThreads = Array.isArray(parsed?.threads) ? parsed.threads : []
+      const threads = parsedThreads
+        .map((thread) => ({
+          id: typeof thread?.id === 'string' ? thread.id : createChatThreadRecord().id,
+          title: typeof thread?.title === 'string' && thread.title.trim() ? thread.title : 'New chat',
+          sessionId: typeof thread?.sessionId === 'string' && thread.sessionId.trim() ? thread.sessionId : `study-${Date.now()}`,
+          updatedAt: Number(thread?.updatedAt) || Date.now(),
+          messages: Array.isArray(thread?.messages) ? thread.messages : [],
+        }))
+        .filter((thread) => thread.updatedAt >= cutoff)
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+
+      if (!threads.length) {
+        return { threads: [fallback], activeId: fallback.id }
+      }
+
+      const storedActiveId = typeof parsed?.activeId === 'string' ? parsed.activeId : ''
+      const activeId = threads.some((thread) => thread.id === storedActiveId) ? storedActiveId : threads[0].id
+      return { threads, activeId }
+    } catch {
+      return { threads: [fallback], activeId: fallback.id }
+    }
+  }
+
+  const initialChatStateRef = useRef(null)
+  if (!initialChatStateRef.current) {
+    initialChatStateRef.current = loadInitialChatState()
+  }
+
   const [activeTopic, setActiveTopic] = useState('perceptron_mlp')
+  const [assistantQuery, setAssistantQuery] = useState('')
+  const [assistantDetailed, setAssistantDetailed] = useState(false)
+  const [assistantLoading, setAssistantLoading] = useState(false)
+  const [assistantError, setAssistantError] = useState('')
+  const [chatOpen, setChatOpen] = useState(false)
+  const [assistantFullscreen, setAssistantFullscreen] = useState(false)
+  const [historyHidden, setHistoryHidden] = useState(false)
+  const [chatMenu, setChatMenu] = useState(null)
+  const [chatThreads, setChatThreads] = useState(() => initialChatStateRef.current.threads)
+  const [activeChatId, setActiveChatId] = useState(() => initialChatStateRef.current.activeId)
+
+  const studyQuizTargets = {
+    perceptron_mlp: 'Perceptron',
+    neural_flow_engine: 'Neural Flow Engine',
+    backpropagation_deep_dive: 'Neural Flow Engine',
+    cnn_lab: 'CNN Lab',
+    rnn: 'RNN Lab',
+    hopfield: 'Hopfield Network',
+  }
 
   const studyItems = [
     { label: 'Perceptron + MLP', href: 'perceptron_mlp' },
-    { label: 'Neural Flow Engine', href: 'neural_flow_engine' },
+    { label: 'Neural Cycle', href: 'neural_flow_engine' },
+    { label: 'Backpropagation', href: 'backpropagation_deep_dive' },
+    { label: 'CNN', href: 'cnn_lab' },
+    { label: 'RNN', href: 'rnn' },
     { label: 'Hopfield Network', href: 'hopfield' },
-    { label: 'CNN Lab', href: 'cnn_lab' },
-    { label: 'RNN Lab', href: 'rnn' },
   ]
 
   // Helper to create activation function graphs
@@ -3965,6 +4515,72 @@ function StudyModeModule() {
     )
   }
 
+  const createLossConvergence = () => {
+    const epochs = Array.from({ length: 16 }, (_, i) => i + 1)
+    const loss = [1.08, 0.94, 0.83, 0.73, 0.65, 0.59, 0.55, 0.51, 0.49, 0.46, 0.48, 0.42, 0.39, 0.37, 0.36, 0.35]
+
+    return (
+      <Plot
+        data={[
+          {
+            x: epochs,
+            y: loss,
+            mode: 'lines+markers',
+            name: 'Training Loss',
+            line: { color: '#5227FF', width: 3 },
+            marker: { color: '#7C3AED', size: 8 },
+          },
+        ]}
+        layout={{
+          title: 'Loss vs Epochs',
+          xaxis: { title: 'Epochs' },
+          yaxis: { title: 'Loss', gridcolor: '#E5E7EB' },
+          plot_bgcolor: '#FFFFFF',
+          paper_bgcolor: '#FFFFFF',
+          font: { color: '#0F172A' },
+          height: 340,
+          margin: { l: 20, r: 20, t: 50, b: 20 },
+        }}
+        style={{ width: '100%', height: '360px' }}
+        config={{ displayModeBar: false }}
+      />
+    )
+  }
+
+  const createBackpropGradientFlow = () => {
+    const layers = ['Output', 'Hidden-2', 'Hidden-1', 'Input-side']
+    const gradients = [0.82, 0.63, 0.41, 0.27]
+
+    return (
+      <Plot
+        data={[
+          {
+            x: layers,
+            y: gradients,
+            type: 'bar',
+            marker: {
+              color: ['#5227FF', '#6D4CFF', '#8B5CF6', '#A78BFA'],
+            },
+            text: gradients.map((g) => g.toFixed(2)),
+            textposition: 'outside',
+          },
+        ]}
+        layout={{
+          title: 'Gradient Magnitude Across Layers',
+          xaxis: { title: 'Layers (backward direction)' },
+          yaxis: { title: 'Gradient Magnitude', range: [0, 1], gridcolor: '#E5E7EB' },
+          plot_bgcolor: '#FFFFFF',
+          paper_bgcolor: '#FFFFFF',
+          font: { color: '#0F172A' },
+          height: 340,
+          margin: { l: 20, r: 20, t: 50, b: 20 },
+        }}
+        style={{ width: '100%', height: '360px' }}
+        config={{ displayModeBar: false }}
+      />
+    )
+  }
+
   // Convolution kernel
   const createKernelHeatmap = () => {
     const kernel = [[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]]
@@ -4200,27 +4816,84 @@ function StudyModeModule() {
 
   const content = {
     perceptron_mlp: {
-      title: 'Perceptron + MLP',
+      title: 'Perceptron: Single Layer and Multilayer',
       sections: [
         {
-          heading: 'Unified Topic Overview',
-          text: 'This track combines single-layer and multi-layer perceptrons into one learning path. A perceptron builds the intuition for weighted sums and decision boundaries, while MLP extends the same idea with hidden layers to model nonlinear patterns.',
+          heading: 'Overview',
+          text: 'A perceptron is the simplest neural network used for binary classification.\nIt forms the foundation of modern deep learning architectures.\nIt is used to understand how inputs are transformed into decisions using weights, bias, and activation functions.',
         },
         {
-          heading: 'Single Layer Perceptron',
-          text: 'The single-layer perceptron is a linear classifier for binary decisions. It computes a weighted sum plus bias, applies an activation, and updates parameters using prediction error.',
-          formula: 'z = w^T x + b\n\hat{y} = f(z)\n\text{Decision boundary: } w^T x + b = 0',
+          heading: 'Learning Goals',
+          text: 'Understand how a perceptron computes outputs from inputs\nDifferentiate between single-layer and multilayer perceptrons\nLearn why multilayer networks solve complex, non-linear problems',
         },
         {
-          heading: 'Multilayer Perceptron (MLP)',
-          text: 'MLP stacks fully connected hidden layers on top of perceptron logic. Nonlinear activations (ReLU, Sigmoid, Tanh) allow representation of complex relationships that are not linearly separable.',
-          formula: 'a^{(l)} = f(W^{(l)}a^{(l-1)} + b^{(l)})\n\mathcal{L}_{MSE} = \frac{1}{N}\sum_i (y_i - \hat{y}_i)^2\nw \leftarrow w - \eta \frac{\partial \mathcal{L}}{\partial w}',
+          heading: 'Core Idea',
+          text: 'A perceptron takes inputs, multiplies them by weights, adds a bias, and passes the result through an activation function to produce an output. A single-layer perceptron can only create a linear decision boundary, meaning it can separate data using a straight line or plane. A multilayer perceptron (MLP) introduces hidden layers that allow the network to learn complex, non-linear relationships by transforming the data step by step.',
         },
         {
-          heading: 'When to Use Which',
-          text: 'Use a single-layer perceptron for linearly separable binary tasks and fast interpretability. Use MLP when interactions are nonlinear and you need deeper feature transformations.',
+          heading: 'Intuition',
+          text: 'A perceptron works like a decision system. Each input contributes differently based on its importance (weight). These contributions are combined, adjusted using bias, and passed through a function to make a final decision. A single-layer perceptron draws one straight boundary, while a multilayer perceptron builds multiple transformations, allowing it to form curved and complex decision boundaries.',
+        },
+        {
+          heading: 'Step-by-Step Working',
+          text: 'Input features are provided to the network\nEach input is multiplied by a corresponding weight\nAll weighted inputs are summed together\nA bias term is added to shift the decision threshold\nThe activation function applies a transformation (e.g., sigmoid converts output into probability between 0 and 1)\nOutput is generated\nIn multilayer perceptron, this output becomes input for the next layer, enabling deeper feature learning',
+        },
+        {
+          heading: 'Key Formula / Rule',
+          text: 'Output = f(∑(wᵢ · xᵢ) + b)\n\nMeaning (Expanded):\nEach input xᵢ is multiplied by its weight wᵢ, all values are summed, and a bias b is added to shift the decision boundary. The activation function f then transforms this result into the final output (e.g., probability).\n\nWhen to use:\nSingle-layer → linearly separable data\nMultilayer → complex, non-linear data',
+          formula: 'Output = f(∑(wᵢ · xᵢ) + b)\nwhere: wᵢ = weights, xᵢ = inputs, b = bias, f = activation function',
+        },
+        {
+          heading: 'Graph / Visualization Explanation',
+          text: 'A single-layer perceptron creates a linear decision boundary (straight line/plane)\n\nIn feature space:\nAxes represent input features\nBoundary separates classes\n\nWhat to observe:\nWhether a straight line can separate data\n\nWhy it fails:\nSome problems (like XOR) cannot be separated by a single line\n\nHow multilayer fixes it:\nHidden layers transform inputs into new feature spaces\nThese transformations allow curved and complex boundaries',
+        },
+        {
+          heading: 'Detailed Example',
+          text: 'Input / Scenario:\nFeatures: Age (0–100), Income ($0–$200k)\nTask: Predict if a person will buy a product (1 = Yes, 0 = No)\n\nSingle-Layer Solution:\nWeights: w₁ = 0.02, w₂ = 0.0001, Bias: b = -2\nFor a person: Age = 30, Income = 50,000\nCalculation: (0.02 × 30) + (0.0001 × 50000) − 2 = 0.6 + 5 − 2 = 3.6\nAfter sigmoid: ≈ 0.97 → Predict Yes\n\nMultilayer Insight:\nHidden layer can learn combinations like: "middle-aged AND high-income"\nSingle-layer cannot capture such interactions\nMultilayer creates new features automatically',
+        },
+        {
+          heading: 'Common Mistakes & Why They Happen',
+          text: 'Using single-layer for complex data → Fails due to non-linear patterns\nToo many hidden layers → Causes overfitting (memorization)\nNot normalizing features → Large values dominate learning\nIgnoring bias → Model loses flexibility in shifting boundary',
+        },
+        {
+          heading: 'Misconceptions',
+          text: '"More layers always improve performance" -> Incorrect\n"Perceptron is same as deep learning model" -> Incorrect',
+        },
+        {
+          heading: 'Limitations & When NOT to Use',
+          text: 'Single-layer fails:\n• XOR problem\n• Image classification\n• Complex decision boundaries\n\nMultilayer overkill:\n• Simple linear problems\n• Small datasets',
+        },
+        {
+          heading: 'Activation Functions – Quick Reference',
+          text: 'Sigmoid: Output layer (binary classification)\nReLU: Hidden layers (fast, avoids vanishing gradient)\nTanh: Alternative to sigmoid\n\nUse ReLU in hidden layers for most cases',
+        },
+        {
+          heading: 'FAQ',
+          text: 'Q: Why can\'t a single-layer perceptron solve XOR?\nA: XOR needs multiple decision boundaries; a single line cannot represent it.\n\nQ: What does bias do?\nA: It shifts the decision boundary away from origin.\n\nQ: How many hidden layers should I use?\nA: Start with 1; increase only if needed.\n\nQ: Why ReLU over sigmoid?\nA: ReLU avoids vanishing gradients and trains faster.\n\nQ: What is linear separability?\nA: When data can be separated using a straight line.\n\nQ: Can I mix activation functions?\nA: Yes, common practice.\n\nQ: Why activation functions are needed?\nA: Without them, network becomes purely linear.\n\nQ: What is MLP vs DNN?\nA: Same concept; DNN has more layers.',
+        },
+        {
+          heading: 'Troubleshooting',
+          text: 'Accuracy stuck at 50% → Check learning rate, data quality\nOverfitting → Use dropout or reduce complexity\nLoss increasing → Learning rate too high',
+        },
+        {
+          heading: 'Implementation Insight',
+          text: 'Single-layer:\nDense(1, activation=\'sigmoid\')\n\nMultilayer:\nDense(64, activation=\'relu\')\nDense(32, activation=\'relu\')\nDense(1, activation=\'sigmoid\')',
+        },
+        {
+          heading: 'Next Learning Steps',
+          text: 'Activation Functions\nForward Propagation\nLoss Functions\nBackpropagation',
         },
       ],
+      ragTags: {
+        topic: 'Neural Networks Fundamentals',
+        subtopic: 'Perceptron Architecture',
+        difficulty: 'Beginner',
+        keywords: ['perceptron', 'MLP', 'XOR problem', 'decision boundary', 'activation function', 'bias', 'weights', 'ReLU', 'sigmoid'],
+        prerequisites: ['linear algebra', 'functions'],
+        related_modules: ['Forward Propagation', 'Activation Functions'],
+        use_cases: ['classification', 'pattern recognition'],
+        common_queries: ['Why multilayer', 'What is bias', 'ReLU vs sigmoid', 'XOR problem'],
+      },
       graphs: [
         { title: 'Activation Functions', render: createActivationPlot },
         { title: 'Perceptron Decision Boundary', render: createPerceptronSurface },
@@ -4228,32 +4901,173 @@ function StudyModeModule() {
       ],
     },
     neural_flow_engine: {
-      title: 'Neural Flow Engine',
+      title: 'Neural Cycle',
       sections: [
         {
-          heading: 'Unified Training Cycle',
-          text: 'Neural Flow Engine merges forward propagation and backward propagation into one continuous training pipeline: Forward pass -> Loss computation -> Backward gradients -> Parameter update.',
+          heading: 'Overview',
+          text: 'This module explains how a neural network learns from data through a complete training cycle.\nIt covers the four key stages: forward pass, loss computation, backpropagation, and weight update.\nThis cycle repeats across epochs, gradually improving model performance.',
         },
         {
-          heading: 'Forward Stage',
-          text: 'Inputs move layer-by-layer and each neuron computes weighted combinations and activations. The final layer produces the prediction used for loss.',
-          formula: 'a^{(l)} = f(W^{(l)}a^{(l-1)} + b^{(l)})',
+          heading: 'Learning Goals',
+          text: 'Understand how data flows through a neural network\nLearn how error is calculated and propagated backward\nUnderstand how weights are updated to improve predictions',
         },
         {
-          heading: 'Loss + Backward Stage',
-          text: 'Loss quantifies prediction error, then backpropagation applies chain rule from output layer to input layer to compute each gradient.',
-          formula: '\mathcal{L} = \frac{1}{N}\sum_i (y_i - \hat{y}_i)^2\n\frac{\partial \mathcal{L}}{\partial W^{(l)}} = \delta^{(l)} (a^{(l-1)})^T',
+          heading: 'Core Idea',
+          text: 'A neural network learns by repeatedly processing input data, measuring how wrong its predictions are, and adjusting its internal parameters to reduce that error. This happens in a cycle: first, the network makes a prediction (forward pass), then calculates the error (loss), then determines how each parameter contributed to the error (backpropagation), and finally updates the parameters to improve future predictions.',
         },
         {
-          heading: 'Update Stage + Stability',
-          text: 'Gradients update weights using learning rate control. Monitoring gradient magnitudes and loss trends helps detect vanishing/exploding behavior and overfitting risk.',
-          formula: 'W \leftarrow W - \eta \frac{\partial \mathcal{L}}{\partial W}',
+          heading: 'Intuition',
+          text: 'Think of learning like correcting mistakes in exams. You attempt questions (forward pass), check how many you got wrong (loss), analyze where you made mistakes (backpropagation), and adjust your understanding (weight update). Repeating this process improves your performance over time.',
+        },
+        {
+          heading: 'Step-by-Step Working',
+          text: 'Step 1: Forward Flow\nInput data passes through layers\nEach layer transforms the data using weights, bias, and activation\nFinal output (prediction) is generated\n\nStep 2: Loss Computation\nCompare predicted output with actual value\nCalculate error using loss function\nExample: Mean Squared Error or Binary Cross Entropy\n\nStep 3: Backward Flow (Backpropagation)\nError is propagated backward through the network\nGradients are computed using chain rule\nDetermines how much each weight contributed to the error\n\nStep 4: Weight Update\nWeights are adjusted using gradients\nLearning rate controls how big the update is\nUpdated weights improve next prediction\n\nRepeat Cycle:\nEntire cycle repeats for multiple epochs\nLoss decreases gradually',
+        },
+        {
+          heading: 'Key Formula / Rule',
+          text: 'Forward:\na⁽ˡ⁾ = f(W⁽ˡ⁾ · a⁽ˡ⁻¹⁾ + b⁽ˡ⁾)\n\nLoss (example):\nL = (1/n) · Σ (y_true − y_pred)²\n\nBackpropagation:\n∂L/∂W = (∂L/∂a) · (∂a/∂z) · (∂z/∂W)\n\nWeight Update:\nW = W − η · (∂L/∂W)\n\nMeaning (Expanded)\nForward computes predictions\nLoss measures error\nBackprop finds responsibility of each weight\nUpdate adjusts weights to reduce error',
+          formula: 'a^(l) = f(W^(l) * a^(l-1) + b^(l))\nL = (1/n) * sum((y_true - y_pred)^2)\n∂L/∂W = (∂L/∂a) * (∂a/∂z) * (∂z/∂W)\nW = W - η * (∂L/∂W)',
+        },
+        {
+          heading: 'Graph / Visualization Explanation',
+          text: 'What the graph shows:\nLoss vs Epochs\n\nAxes:\nX-axis -> Epochs (training iterations)\nY-axis -> Loss (error)\n\nWhat to observe:\nLoss decreasing over time\nSudden spikes -> instability\n\nInterpretation:\nDecreasing curve -> model learning\nFlat curve -> learning stopped\nIncreasing curve -> learning rate too high',
+        },
+        {
+          heading: 'Detailed Example',
+          text: 'Input / Scenario:\nTask: Predict house price\nFeatures: Size, Rooms\n\nForward:\nModel predicts price = INR 50L\n\nActual:\nINR 60L\n\nLoss:\nError = INR 10L\n\nBackpropagation:\nModel identifies which weights caused the error\n\nUpdate:\nAdjust weights to increase prediction\n\nNext Iteration:\nPrediction improves (e.g., INR 55L -> INR 58L -> INR 60L)',
+        },
+        {
+          heading: 'Common Mistakes & Why They Happen',
+          text: 'Skipping normalization -> unstable training\nHigh learning rate -> loss increases\nToo few epochs -> underfitting\nToo many epochs -> overfitting',
+        },
+        {
+          heading: 'Misconceptions',
+          text: '"Backpropagation changes output directly" -> Incorrect\nIt updates weights, not outputs\n\n"Loss should become zero" -> Incorrect\nReal-world data has noise',
+        },
+        {
+          heading: 'Limitations & When NOT to Use',
+          text: 'Requires differentiable functions\nSensitive to hyperparameters\nCan be slow for large networks',
+        },
+        {
+          heading: 'Activation Functions – Quick Reference',
+          text: 'ReLU -> hidden layers\nSigmoid -> binary output\nSoftmax -> multi-class',
+        },
+        {
+          heading: 'FAQ',
+          text: 'Q: Why do we need backpropagation?\nA: To know how each weight affects the error.\n\nQ: What is learning rate?\nA: Step size of weight update.\n\nQ: Why does loss decrease?\nA: Model adjusts weights to reduce error.\n\nQ: What happens if learning rate is too high?\nA: Model becomes unstable.\n\nQ: Why repeat epochs?\nA: Learning improves gradually.\n\nQ: Can learning stop early?\nA: Yes, if model converges.\n\nQ: What is gradient?\nA: Direction of steepest error increase.\n\nQ: Why normalize data?\nA: Ensures stable training.',
+        },
+        {
+          heading: 'Troubleshooting',
+          text: 'Loss not decreasing -> Check learning rate\nOverfitting -> Use regularization\nSlow learning -> Increase learning rate slightly',
+        },
+        {
+          heading: 'Implementation Insight',
+          text: '# Forward pass\noutput = model(x)\n\n# Loss\nloss = criterion(output, y)\n\n# Backprop\nloss.backward()\n\n# Update\noptimizer.step()',
+        },
+        {
+          heading: 'Next Learning Steps',
+          text: 'Backpropagation (deep dive)\nOptimization Algorithms (Adam, SGD)\nRegularization Techniques',
         },
       ],
+      ragTags: {
+        topic: 'Neural Network Training',
+        subtopic: 'Learning Cycle',
+        difficulty: 'Beginner',
+        keywords: ['forward pass', 'loss', 'backpropagation', 'weight update', 'training cycle', 'epochs'],
+        prerequisites: ['perceptron', 'activation functions'],
+        related_modules: ['Backpropagation', 'Optimization'],
+        use_cases: ['model training', 'deep learning'],
+        common_queries: ['how neural networks learn', 'what is backprop', 'why loss decreases'],
+      },
       graphs: [
+        { title: 'Loss vs Epochs', render: createLossConvergence },
         { title: 'Layer-wise Forward Values', render: createForwardFlow },
         { title: 'Gradient Stability', render: createGradientDecay },
         { title: 'Weight Update Magnitudes', render: createBackpropWeights },
+      ],
+    },
+    backpropagation_deep_dive: {
+      title: 'Backpropagation: Deep Dive',
+      sections: [
+        {
+          heading: 'Overview',
+          text: 'Backpropagation is the core algorithm used to train neural networks by updating weights based on error.\nIt calculates how much each parameter contributed to the loss.\nIt is used in almost all deep learning models to enable learning from data.',
+        },
+        {
+          heading: 'Learning Goals',
+          text: 'Understand how errors are propagated backward in a network\nLearn how gradients are computed using the chain rule\nUnderstand how backpropagation enables weight updates',
+        },
+        {
+          heading: 'Core Idea',
+          text: 'Backpropagation is a method for computing gradients of the loss function with respect to each weight in the network. It works by propagating the error backward from the output layer to earlier layers using the chain rule. These gradients tell us how to adjust each weight to reduce the overall error.',
+        },
+        {
+          heading: 'Intuition',
+          text: 'Think of backpropagation like tracing mistakes in a calculation. If the final answer is wrong, you go step-by-step backward to see where the mistake happened and how much each step contributed. Similarly, backpropagation identifies how each neuron and weight contributed to the error and assigns responsibility accordingly.',
+        },
+        {
+          heading: 'Step-by-Step Working',
+          text: 'Perform forward pass and compute prediction\nCalculate loss (difference between predicted and actual output)\nStart from output layer and compute gradient of loss\nUse chain rule to propagate gradients backward through layers\nCompute gradient for each weight and bias\nStore gradients for weight update\nPass gradients to optimization step',
+        },
+        {
+          heading: 'Key Formula / Rule',
+          text: 'Gradient Calculation:\n∂L/∂W = (∂L/∂a) · (∂a/∂z) · (∂z/∂W)\n\nMeaning (Expanded)\n∂L/∂a -> how output affects loss\n∂a/∂z -> activation function derivative\n∂z/∂W -> how weights affect neuron output\n\nCombined, this tells how each weight affects the final error.\n\nWhen to use\nDuring training of neural networks\nRequired for gradient-based optimization',
+          formula: '∂L/∂W = (∂L/∂a) * (∂a/∂z) * (∂z/∂W)',
+        },
+        {
+          heading: 'Graph / Visualization Explanation',
+          text: 'What the graph shows:\nGradient flow through layers\n\nAxes:\nX-axis -> layers\nY-axis -> gradient magnitude\n\nWhat to observe:\nGradients becoming very small -> vanishing gradient\nGradients becoming large -> exploding gradient\n\nInterpretation:\nStable gradients -> effective learning\nVery small gradients -> slow or no learning\nVery large gradients -> unstable training',
+        },
+        {
+          heading: 'Detailed Example',
+          text: 'Input / Scenario:\nBinary classification problem\nInput -> model predicts 0.8\nActual -> 1\n\nLoss:\nError = 0.2\n\nBackpropagation:\nOutput layer computes gradient of loss\nHidden layer receives error signal\nEach weight gets a gradient value\n\nInsight:\nIf a weight increases error -> decrease it\nIf a weight reduces error -> increase it',
+        },
+        {
+          heading: 'Common Mistakes & Why They Happen',
+          text: 'Ignoring activation derivatives -> incorrect gradients\nUsing sigmoid in deep networks -> vanishing gradient problem\nIncorrect implementation of chain rule -> wrong updates\nNot scaling gradients -> unstable learning',
+        },
+        {
+          heading: 'Misconceptions',
+          text: '"Backpropagation is a separate algorithm from gradient descent" -> Incorrect\nIt computes gradients used by gradient descent\n\n"Backprop updates weights directly" -> Incorrect\nIt only computes gradients',
+        },
+        {
+          heading: 'Limitations & When NOT to Use',
+          text: 'Requires differentiable functions\nStruggles with very deep networks (vanishing gradients)\nComputationally expensive for large models',
+        },
+        {
+          heading: 'Activation Functions – Quick Reference',
+          text: 'ReLU -> avoids vanishing gradient\nSigmoid -> can cause vanishing gradient\nTanh -> better than sigmoid but still limited',
+        },
+        {
+          heading: 'FAQ',
+          text: 'Q: Why do we need backpropagation?\nA: To compute gradients efficiently for all weights.\n\nQ: What is chain rule?\nA: A method to compute derivatives of composite functions.\n\nQ: What is gradient?\nA: Direction of steepest increase in loss.\n\nQ: Why do gradients vanish?\nA: Repeated multiplication of small numbers in deep networks.\n\nQ: What is exploding gradient?\nA: Gradients become very large, causing instability.\n\nQ: Can backprop work without activation functions?\nA: No, because network becomes linear.\n\nQ: Why is ReLU preferred?\nA: Prevents vanishing gradients.\n\nQ: How is backprop related to forward pass?\nA: It uses values computed during forward pass.',
+        },
+        {
+          heading: 'Troubleshooting',
+          text: 'Loss not decreasing -> check gradients\nTraining unstable -> reduce learning rate\nSlow learning -> check activation function',
+        },
+        {
+          heading: 'Implementation Insight',
+          text: 'loss.backward()  # computes gradients\noptimizer.step() # updates weights',
+        },
+        {
+          heading: 'Next Learning Steps',
+          text: 'Gradient Descent\nOptimization Algorithms (Adam, SGD)\nVanishing Gradient Problem',
+        },
+      ],
+      ragTags: {
+        topic: 'Neural Network Training',
+        subtopic: 'Backpropagation',
+        difficulty: 'Intermediate',
+        keywords: ['backpropagation', 'gradients', 'chain rule', 'vanishing gradient', 'exploding gradient'],
+        prerequisites: ['forward propagation', 'derivatives'],
+        related_modules: ['Neural Learning Cycle', 'Optimization'],
+        use_cases: ['deep learning training'],
+        common_queries: ['how backprop works', 'what is gradient', 'chain rule in NN'],
+      },
+      graphs: [
+        { title: 'Gradient Flow Through Layers', render: createBackpropGradientFlow },
+        { title: 'Gradient Stability', render: createGradientDecay },
       ],
     },
     hopfield: {
@@ -4298,61 +5112,168 @@ function StudyModeModule() {
       ],
     },
     cnn_lab: {
-      title: 'CNN Lab Concepts',
+      title: 'CNN',
       sections: [
         {
           heading: 'Overview',
-          text: 'CNN Lab focuses on image classification and interpretability using pretrained convolutional neural networks. It combines predictive performance with visual explanations through feature maps and Grad-CAM.',
+          text: 'Convolutional Neural Networks (CNNs) are specialized neural networks designed for processing image and spatial data.\nThey automatically learn features like edges, textures, and objects from images.\nCNNs are widely used in image classification, object detection, and computer vision tasks.',
         },
         {
-          heading: 'Basics',
-          text: '• Introduction: goal is machine understanding of visual scenes\n• Image Processing: enhancement, filtering, denoising, transformation\n• Image Representation and Pixels: images as numeric grids/channels\n• Image Analysis and Manipulation: extracting structure and editing content',
+          heading: 'Learning Goals',
+          text: 'Understand how CNNs process images differently from regular neural networks\nLearn the role of convolution, filters, and pooling\nUnderstand how CNNs extract hierarchical features',
         },
         {
-          heading: 'Key Concepts',
-          text: '1. Image Transformation: Changes spatial or intensity structure. Geometric transforms (rotate/scale/translate/warp) align viewpoints, intensity transforms adjust brightness, Fourier-domain transforms isolate periodic noise.\n\n2. Image Enhancement: Improves visual quality. Histogram equalization exposes hidden details, sharpening emphasizes boundaries, color correction reduces illumination bias.\n\n3. Noise Reduction: Median filtering for salt-and-pepper, bilateral filtering preserves edges, wavelet denoising removes multi-scale noise.\n\n4. Morphological Operations: Erosion/dilation shrink/expand foreground, opening removes noise blobs, closing fills holes, morphological gradient highlights boundaries.\n\n5. Feature Extraction: Edge detectors (Canny/Sobel), corner detectors, SIFT/SURF/ORB, HOG descriptors.',
-          formula: '(I*K)(i,j) = Σₘ Σₙ I(i-m,j-n)K(m,n)\nIoU = Area(B_pred ∩ B_gt) / Area(B_pred ∪ B_gt)',
+          heading: 'Core Idea',
+          text: 'CNNs use filters (kernels) that slide over an image to detect patterns such as edges and textures. Instead of connecting every neuron to every input (like in MLP), CNNs focus on local regions, making them efficient and effective for image data. As data passes through layers, the network learns increasingly complex features—from simple edges to full objects.',
         },
         {
-          heading: 'Deep Learning for CNN Lab',
-          text: '• Convolutional Neural Networks (CNNs): Convolutional layers, pooling layers, fully connected layers\n• Generative Adversarial Networks (GANs): DCGAN, cGAN, CycleGAN, SRGAN, StyleGAN\n• Variational Autoencoders (VAEs): VAE, Denoising Autoencoder, Convolutional Autoencoder\n• Vision Transformers (ViT): ViT, Swin Transformer, CvT\n• Vision-Language Models: CLIP, ALIGN, BLIP',
+          heading: 'Intuition',
+          text: 'Think of how humans recognize objects. First, we detect simple patterns like edges, then shapes, and finally complete objects. CNNs work similarly: early layers detect edges, middle layers detect textures and shapes, and deeper layers recognize objects. This layered learning makes CNNs powerful for visual tasks.',
+        },
+        {
+          heading: 'Step-by-Step Working',
+          text: 'Input image is fed into the network\nConvolution layer applies filters to extract features\nActivation function (ReLU) introduces non-linearity\nPooling layer reduces spatial size and keeps important features\nProcess repeats for multiple layers\nFlatten layer converts feature maps into vector\nFully connected layer makes final prediction',
+        },
+        {
+          heading: 'Key Formula / Rule',
+          text: 'Convolution Operation:\nFeature Map = Input ⊗ Kernel + Bias\n\nMeaning (Expanded)\nA small filter (kernel) moves across the image\nAt each position, it multiplies pixel values and sums them\nThis highlights specific patterns like edges or textures\n\nWhen to use\nImage data\nSpatial data (videos, grids)',
+          formula: 'Feature Map = Input (*) Kernel + Bias',
+        },
+        {
+          heading: 'Graph / Visualization Explanation',
+          text: 'What the visualization shows:\nFeature maps generated after convolution\n\nAxes:\nX and Y -> spatial dimensions of image\nDepth -> number of filters\n\nWhat to observe:\nEarly layers detect edges\nDeeper layers detect shapes and objects\n\nInterpretation:\nBright regions -> strong feature detection\nDark regions -> weak or no detection',
+        },
+        {
+          heading: 'Detailed Example',
+          text: 'Input / Scenario:\nImage: Cat vs Dog classification\n\nProcess:\nFirst layer detects edges (ears, outline)\nSecond layer detects textures (fur patterns)\nFinal layers combine features to recognize animal\n\nOutput:\nProbability:\nCat = 0.85\nDog = 0.15\n\nInsight:\nCNN learns features automatically instead of manual feature engineering',
+        },
+        {
+          heading: 'Common Mistakes & Why They Happen',
+          text: 'Using too many filters early -> high computation cost\nSkipping normalization -> unstable training\nToo much pooling -> loss of important details\nSmall dataset -> overfitting',
+        },
+        {
+          heading: 'Misconceptions',
+          text: '"CNN only works for images" -> Incorrect\nCan be used for audio, text (1D CNN)\n\n"More layers always better" -> Incorrect',
+        },
+        {
+          heading: 'Limitations & When NOT to Use',
+          text: 'Not suitable for sequential data (use RNN)\nRequires large dataset\nComputationally expensive',
+        },
+        {
+          heading: 'Activation Functions – Quick Reference',
+          text: 'ReLU -> most common in CNN\nSoftmax -> output layer (classification)',
+        },
+        {
+          heading: 'FAQ',
+          text: 'Q: Why CNN instead of MLP for images?\nA: CNN uses local connections and fewer parameters.\n\nQ: What is a filter?\nA: A small matrix that detects patterns.\n\nQ: What is pooling?\nA: Reduces size while keeping important features.\n\nQ: Why ReLU in CNN?\nA: Faster training and avoids vanishing gradients.\n\nQ: What is feature map?\nA: Output of convolution showing detected patterns.\n\nQ: Why multiple filters?\nA: Each detects different features.\n\nQ: What happens in deeper layers?\nA: More complex features are learned.\n\nQ: Can CNN overfit?\nA: Yes, especially with small datasets.',
+        },
+        {
+          heading: 'Troubleshooting',
+          text: 'Poor accuracy -> increase dataset or use augmentation\nOverfitting -> use dropout or regularization\nSlow training -> reduce layers or use GPU',
+        },
+        {
+          heading: 'Implementation Insight',
+          text: 'Conv2D(filters=32, kernel_size=(3,3), activation=\'relu\')\nMaxPooling2D(pool_size=(2,2))\nFlatten()\nDense(10, activation=\'softmax\')',
+        },
+        {
+          heading: 'Next Learning Steps',
+          text: 'Feature Maps & Visualization\nCNN Architectures (ResNet, VGG)\nTransfer Learning',
         },
       ],
+      ragTags: {
+        topic: 'Deep Learning',
+        subtopic: 'Convolutional Neural Networks',
+        difficulty: 'Intermediate',
+        keywords: ['CNN', 'convolution', 'pooling', 'feature map', 'filters', 'image classification'],
+        prerequisites: ['perceptron', 'activation functions'],
+        related_modules: ['Neural Learning Cycle', 'Feature Maps'],
+        use_cases: ['image classification', 'object detection'],
+        common_queries: ['how CNN works', 'what is convolution', 'why pooling'],
+      },
       graphs: [
         { title: 'Convolution Kernel', render: createKernelHeatmap },
         { title: 'Task Complexity Map', render: createCVTaskMap },
       ],
     },
     rnn: {
-      title: 'RNN Lab',
+      title: 'Recurrent Neural Networks (RNN): Learning from Sequences',
       sections: [
         {
           heading: 'Overview',
-          text: 'Recurrent Neural Networks (RNNs) are designed for sequential and temporal data. They retain information from previous steps using hidden state memory, making them useful where order and context matter.',
+          text: 'Recurrent Neural Networks (RNNs) are designed to process sequential data where order matters.\nThey use previous information (memory) to influence current predictions.\nRNNs are widely used in text generation, speech recognition, and time-series forecasting.',
         },
         {
-          heading: 'Why RNNs',
-          text: '• Designed for sequential and temporal inputs\n• Maintains memory of previous inputs\n• Common in NLP, forecasting, and speech tasks\n\nWhen predicting the next word in a sentence, we use previous words as context. RNNs work similarly by passing hidden state from one time step to the next.',
+          heading: 'Learning Goals',
+          text: 'Understand how RNNs handle sequential data\nLearn the concept of hidden state (memory)\nDifferentiate RNNs from CNNs and MLPs',
         },
         {
-          heading: 'Core Architecture',
-          text: '• Recurrent neurons: units with hidden state that carry sequence memory\n• Unfolding (unrolling): expansion over time steps for learning dependencies',
-          formula: 'h = σ(U·X + W·h_{t-1} + B)\nY = O(V·h + C)\nY = f(X,h,W,U,V,B,C)\nh_t = f(h_{t-1}, x_t)\nh_t = tanh(W_{hh}h_{t-1} + W_{xh}x_t)\ny_t = W_{hy}h_t',
+          heading: 'Core Idea',
+          text: 'RNNs process data step-by-step, maintaining a hidden state that carries information from previous steps. Unlike traditional neural networks that treat inputs independently, RNNs use past context to make better predictions. This makes them suitable for tasks like predicting the next word in a sentence.',
         },
         {
-          heading: 'Backpropagation Through Time (BPTT)',
-          text: 'Because sequence states depend on earlier states, gradients are propagated backward through time steps. This enables learning of long-range dependencies.',
-          formula: '∂L(θ)/∂W = ∂L(θ)/∂h₃ · ∂h₃/∂W\n∂L(θ)/∂W = ∂L(θ)/∂h₃ · Σₖ ∂h₃/∂hₖ · ∂hₖ/∂W',
+          heading: 'Intuition',
+          text: 'Think of reading a sentence: you understand each word based on previous words. For example, in “I am going to the…”, you can guess the next word because of context. RNNs work similarly by remembering past inputs and using that memory to influence current decisions.',
         },
         {
-          heading: 'RNN Variants',
-          text: '• Vanilla RNN: simple, short dependency learning\n• Bidirectional RNN: forward + backward context\n• LSTM: input/forget/output gates for long memory\n• GRU: lighter gated version, often faster\n\nLSTMs and GRUs solve the vanishing gradient problem present in vanilla RNNs.',
+          heading: 'Step-by-Step Working',
+          text: 'Input sequence is provided (word by word or timestep by timestep)\nAt each step, input is combined with previous hidden state\nHidden state is updated using weights and activation\nOutput is generated for each step or final step\nHidden state carries forward information\nProcess repeats for entire sequence',
         },
         {
-          heading: 'Applications',
-          text: '• Time-series prediction\n• NLP and language modeling\n• Speech recognition\n• Video and sequence understanding',
+          heading: 'Key Formula / Rule',
+          text: 'Hidden State Update:\nhₜ = f(Wₓxₜ + Wₕhₜ₋₁ + b)\n\nMeaning (Expanded)\nxₜ -> current input\nhₜ₋₁ -> previous memory\nWₓ, Wₕ -> weights\nhₜ -> updated memory\n\nCombines current input with past memory\n\nWhen to use\nSequential data (text, time-series, speech)',
+          formula: 'h_t = f(W_x * x_t + W_h * h_(t-1) + b)',
+        },
+        {
+          heading: 'Graph / Visualization Explanation',
+          text: 'What the diagram shows:\nSequence unfolding over time\n\nAxes:\nX-axis -> time steps\nNodes -> hidden states\n\nWhat to observe:\nEach step depends on previous step\nInformation flows through time\n\nInterpretation:\nStrong dependency -> better context understanding\nLong sequences -> harder to remember early inputs',
+        },
+        {
+          heading: 'Detailed Example',
+          text: 'Input / Scenario:\nSentence: “I love machine learning”\n\nStep-wise:\nInput 1 -> “I” -> initial hidden state\nInput 2 -> “love” -> updated state\nInput 3 -> “machine” -> richer context\nInput 4 -> “learning” -> final prediction\n\nOutput:\nPredict next word -> “models”\n\nInsight:\nModel uses entire sequence context\nEarlier words influence final prediction',
+        },
+        {
+          heading: 'Common Mistakes & Why They Happen',
+          text: 'Using basic RNN for long sequences -> forgets earlier information\nNot padding sequences -> inconsistent input size\nIgnoring sequence order -> incorrect predictions',
+        },
+        {
+          heading: 'Misconceptions',
+          text: '"RNN remembers everything perfectly" -> Incorrect\n"RNN is always better than CNN" -> Incorrect',
+        },
+        {
+          heading: 'Limitations & When NOT to Use',
+          text: 'Struggles with long-term dependencies\nSlow training due to sequential nature\nReplaced by Transformers in many tasks',
+        },
+        {
+          heading: 'Activation Functions – Quick Reference',
+          text: 'Tanh -> hidden state updates\nSigmoid -> gating (in advanced RNNs)',
+        },
+        {
+          heading: 'FAQ',
+          text: 'Q: What is hidden state?\nA: Memory that stores past information.\n\nQ: Why RNN for text?\nA: Text depends on sequence order.\n\nQ: What is vanishing gradient in RNN?\nA: Gradients become too small over time steps.\n\nQ: Why does RNN forget long sequences?\nA: Information decays through repeated updates.\n\nQ: What is difference between RNN and LSTM?\nA: LSTM handles long-term memory better.\n\nQ: Can RNN be used for images?\nA: Not ideal, CNN is better.\n\nQ: Why is training slow?\nA: Sequential processing cannot be parallelized easily.\n\nQ: What is sequence length?\nA: Number of time steps in input.',
+        },
+        {
+          heading: 'Troubleshooting',
+          text: 'Model forgetting context -> use LSTM/GRU\nSlow training -> reduce sequence length\nPoor predictions -> improve data quality',
+        },
+        {
+          heading: 'Implementation Insight',
+          text: 'LSTM(64, return_sequences=True)\nDense(vocab_size, activation=\'softmax\')',
+        },
+        {
+          heading: 'Next Learning Steps',
+          text: 'LSTM & GRU\nAttention Mechanism\nTransformers',
         },
       ],
+      ragTags: {
+        topic: 'Deep Learning',
+        subtopic: 'Recurrent Neural Networks',
+        difficulty: 'Intermediate',
+        keywords: ['RNN', 'sequence modeling', 'hidden state', 'LSTM', 'time series', 'text generation'],
+        prerequisites: ['perceptron', 'neural learning cycle'],
+        related_modules: ['LSTM', 'NLP models'],
+        use_cases: ['text prediction', 'speech recognition', 'time series'],
+        common_queries: ['what is RNN', 'how sequence models work', 'why RNN fails'],
+      },
       graphs: [
         { title: 'Memory Retention', render: createRNNMemory },
         { title: 'Hidden State Evolution', render: createRNNUnrolling },
@@ -4361,9 +5282,557 @@ function StudyModeModule() {
   }
 
   const selected = content[activeTopic]
+  const assistantContext = selected?.ragTags
+    ? Object.entries(selected.ragTags)
+      .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
+      .join(' | ')
+    : ''
+
+  const sectionGraphsByTopic = {
+    perceptron_mlp: {
+      'Graph / Visualization Explanation': [
+        { title: 'Perceptron Decision Boundary', render: createPerceptronSurface },
+        { title: 'Activation Functions', render: createActivationPlot },
+      ],
+    },
+    neural_flow_engine: {
+      'Graph / Visualization Explanation': [
+        { title: 'Loss vs Epochs', render: createLossConvergence },
+      ],
+    },
+    backpropagation_deep_dive: {
+      'Graph / Visualization Explanation': [
+        { title: 'Gradient Flow Through Layers', render: createBackpropGradientFlow },
+        { title: 'Gradient Stability', render: createGradientDecay },
+      ],
+    },
+    cnn_lab: {
+      'Graph / Visualization Explanation': [
+        { title: 'Convolution Kernel', render: createKernelHeatmap },
+        { title: 'Task Complexity Map', render: createCVTaskMap },
+      ],
+    },
+    rnn: {
+      'Graph / Visualization Explanation': [
+        { title: 'Memory Retention', render: createRNNMemory },
+        { title: 'Hidden State Evolution', render: createRNNUnrolling },
+      ],
+    },
+  }
+
+  const [katex, setKatex] = useState(null)
+
+  useEffect(() => {
+    import('katex').then((m) => setKatex(() => m.default || m))
+  }, [])
+
+  const inlineSectionGraphs = sectionGraphsByTopic[activeTopic] || {}
+  const inlineGraphTitles = new Set(Object.values(inlineSectionGraphs).flat().map((graph) => graph.title))
+  const trailingGraphs = (selected.graphs || []).filter((graph) => !inlineGraphTitles.has(graph.title))
+
+  const renderDisplayMathBlock = (formulaText, key, className = 'study-formula-block') => {
+    const raw = (formulaText || '').trim()
+    if (!raw) return null
+
+    const normalized = raw
+      .replace(/^\$\$\s*/, '')
+      .replace(/\s*\$\$$/, '')
+      .replace(/^\\\[\s*/, '')
+      .replace(/\s*\\\]$/, '')
+      .trim()
+
+    if (!normalized) return null
+
+    if (!katex) {
+      return (
+        <div key={key} className={className}>
+          {normalized}
+        </div>
+      )
+    }
+
+    try {
+      const html = katex.renderToString(normalized, {
+        throwOnError: false,
+        displayMode: true,
+      })
+
+      return (
+        <div key={key} className={className}>
+          <div dangerouslySetInnerHTML={{ __html: html }} />
+        </div>
+      )
+    } catch {
+      return (
+        <div key={key} className={`${className} study-math-error`}>
+          {normalized}
+        </div>
+      )
+    }
+  }
+
+  const renderInlineContent = (text) => {
+    if (!katex) return text
+    
+    const parts = []
+    let remaining = text
+    let partKey = 0
+
+    const tryRenderMath = (content, isDisplay = false) => {
+      try {
+        const html = katex.renderToString(content, { 
+          throwOnError: false,
+          displayMode: isDisplay
+        })
+        return html
+      } catch (e) {
+        return null
+      }
+    }
+
+    while (remaining.length > 0) {
+      // Try to find display math first
+      const displayMathMatch = remaining.match(/^(.*?)\$\$([^$]*?[^$\s])\$\$(.*)/s)
+      if (displayMathMatch) {
+        const [, before, mathContent, after] = displayMathMatch
+        if (before) {
+          parts.push(
+            <Fragment key={`text-before-${partKey}`}>
+              {renderInlineContent(before)}
+            </Fragment>
+          )
+          partKey += 1
+        }
+        
+        const mathHtml = tryRenderMath(mathContent, true)
+        if (mathHtml) {
+          parts.push(
+            <div
+              key={`display-math-${partKey}`}
+              className="study-inline-math-display"
+              dangerouslySetInnerHTML={{ __html: mathHtml }}
+            />
+          )
+        } else {
+          parts.push(
+            <div key={`math-error-${partKey}`} className="study-math-error">
+              {mathContent}
+            </div>
+          )
+        }
+        partKey += 1
+        remaining = after
+        continue
+      }
+
+      const bracketMathMatch = remaining.match(/^(.*?)\\\[([\s\S]*?)\\\](.*)/)
+      if (bracketMathMatch) {
+        const [, before, mathContent, after] = bracketMathMatch
+        if (before) {
+          parts.push(before)
+        }
+
+        const mathHtml = tryRenderMath(mathContent.trim(), true)
+        if (mathHtml) {
+          parts.push(
+            <div
+              key={`bracket-math-${partKey}`}
+              className="study-inline-math-display"
+              dangerouslySetInnerHTML={{ __html: mathHtml }}
+            />
+          )
+        } else {
+          parts.push(
+            <div key={`bracket-math-error-${partKey}`} className="study-math-error">
+              {mathContent}
+            </div>
+          )
+        }
+        partKey += 1
+        remaining = after
+        continue
+      }
+
+      // Try inline math
+      const inlineMathMatch = remaining.match(/^(.*?)\$([^$\n]+?)\$(.*)/s)
+      if (inlineMathMatch) {
+        const [, before, mathContent, after] = inlineMathMatch
+        
+        if (before) {
+          // Check for bold first
+          const boldMatch = before.match(/^(.*?)\*\*([^*]+?)\*\*(.*)/s)
+          if (boldMatch) {
+            const [, beforeBold, boldText, afterBold] = boldMatch
+            if (beforeBold) parts.push(beforeBold)
+            parts.push(
+              <strong key={`bold-${partKey}`}>{boldText}</strong>
+            )
+            partKey += 1
+            remaining = `${afterBold}$${mathContent}$${after}`
+            continue
+          } else {
+            parts.push(before)
+          }
+        }
+        
+        const mathHtml = tryRenderMath(mathContent, false)
+        if (mathHtml) {
+          parts.push(
+            <span
+              key={`inline-math-${partKey}`}
+              className="study-inline-math"
+              dangerouslySetInnerHTML={{ __html: mathHtml }}
+            />
+          )
+        } else {
+          parts.push(
+            <span key={`math-error-${partKey}`} className="study-math-error">
+              {mathContent}
+            </span>
+          )
+        }
+        partKey += 1
+        remaining = after
+        continue
+      }
+
+      // Handle malformed single-dollar math like ":$ \text{...}" without a closing "$"
+      const inlineMathTailMatch = remaining.match(/^(.*?)\$(\s*\\[A-Za-z][\s\S]*)$/)
+      if (inlineMathTailMatch) {
+        const [, before, mathTail] = inlineMathTailMatch
+
+        if (before) {
+          parts.push(before)
+        }
+
+        const mathHtml = tryRenderMath(mathTail.trim(), false)
+        if (mathHtml) {
+          parts.push(
+            <span
+              key={`inline-math-tail-${partKey}`}
+              className="study-inline-math"
+              dangerouslySetInnerHTML={{ __html: mathHtml }}
+            />
+          )
+        } else {
+          parts.push(
+            <span key={`math-tail-error-${partKey}`} className="study-math-error">
+              {mathTail}
+            </span>
+          )
+        }
+
+        partKey += 1
+        break
+      }
+
+      // Try bold without math
+      const boldMatch = remaining.match(/^(.*?)\*\*([^*]+?)\*\*(.*)/s)
+      if (boldMatch) {
+        const [, before, boldText, after] = boldMatch
+        if (before) parts.push(before)
+        parts.push(
+          <strong key={`bold-${partKey}`}>{boldText}</strong>
+        )
+        partKey += 1
+        remaining = after
+        continue
+      }
+
+      // No more patterns, push everything remaining
+      parts.push(remaining)
+      break
+    }
+
+    return parts
+  }
+
+  const renderStudyText = (text) => {
+    const lines = text.split('\n')
+    const renderedLines = []
+
+    for (let idx = 0; idx < lines.length; idx += 1) {
+      const line = lines[idx].trim()
+
+      if (!line) {
+        renderedLines.push(<div key={`gap-${idx}`} className="study-line-gap" aria-hidden="true" />)
+        continue
+      }
+
+      if (line === '$$') {
+        const formulaLines = []
+        let cursor = idx + 1
+        while (cursor < lines.length && lines[cursor].trim() !== '$$') {
+          formulaLines.push(lines[cursor])
+          cursor += 1
+        }
+
+        if (cursor < lines.length) {
+          const block = renderDisplayMathBlock(formulaLines.join('\n'), `formula-multiline-${idx}`)
+          if (block) renderedLines.push(block)
+          idx = cursor
+          continue
+        }
+      }
+
+      if (line === '\\[') {
+        const formulaLines = []
+        let cursor = idx + 1
+        while (cursor < lines.length && lines[cursor].trim() !== '\\]') {
+          formulaLines.push(lines[cursor])
+          cursor += 1
+        }
+
+        if (cursor < lines.length) {
+          const block = renderDisplayMathBlock(formulaLines.join('\n'), `formula-bracket-${idx}`)
+          if (block) renderedLines.push(block)
+          idx = cursor
+          continue
+        }
+      }
+
+      if (/^\$\$.*\$\$$/.test(line) || (/^\$\$/.test(line) && /\$\$$/.test(line))) {
+        const block = renderDisplayMathBlock(line, `formula-${idx}`)
+        if (block) renderedLines.push(block)
+        continue
+      }
+
+      if (/^\\\[.*\\\]$/.test(line)) {
+        const block = renderDisplayMathBlock(line, `formula-bracket-inline-${idx}`)
+        if (block) renderedLines.push(block)
+        continue
+      }
+
+      if (/^#{1,3}\s+/.test(line)) {
+        const level = line.match(/^#{1,3}/)?.[0].length || 1
+        const headingText = line.replace(/^#{1,3}\s+/, '')
+        const renderedHeading = renderInlineContent(toSentenceCaseHeading(headingText))
+        renderedLines.push(
+          <p key={`heading-${idx}`} className={`study-line study-heading study-heading-level-${level}`}>
+            {renderedHeading}
+          </p>
+        )
+        continue
+      }
+
+      if (/^Q:\s*/.test(line)) {
+        const qText = line.replace(/^Q:\s*/, '')
+        const rendered = renderInlineContent(qText)
+        renderedLines.push(
+          <p key={`q-${idx}`} className="study-line study-qa-line">
+            <strong>Q:</strong> {rendered}
+          </p>
+        )
+        continue
+      }
+
+      if (/^A:\s*/.test(line)) {
+        const aText = line.replace(/^A:\s*/, '')
+        const rendered = renderInlineContent(aText)
+        renderedLines.push(
+          <p key={`a-${idx}`} className="study-line study-answer-line">
+            <strong>A:</strong> {rendered}
+          </p>
+        )
+        continue
+      }
+
+      if (/^-{3,}$/.test(line)) {
+        renderedLines.push(<hr key={`hr-${idx}`} className="study-divider" />)
+        continue
+      }
+
+      if (/^(\d+\.|•|-)/.test(line)) {
+        const cleanLine = line.replace(/^(\d+\.|•|-)\s*/, '')
+        const rendered = renderInlineContent(cleanLine)
+        renderedLines.push(
+          <p key={`bullet-${idx}`} className="study-line study-arrow-line">
+            <span className="study-arrow">-&gt;</span>
+            <span>{rendered}</span>
+          </p>
+        )
+        continue
+      }
+
+      const labelMatch = line.match(/^([^:]{2,42}):(.*)$/)
+      if (labelMatch) {
+        const label = labelMatch[1].trim()
+        const remainder = labelMatch[2].trim()
+        const rendered = remainder ? renderInlineContent(remainder) : ''
+        renderedLines.push(
+          <p key={`label-${idx}`} className="study-line">
+            <span className="study-line-key">{label}:</span>{rendered ? ` ${rendered}` : ''}
+          </p>
+        )
+        continue
+      }
+
+      if (line.includes('->')) {
+        const [left, right] = line.split('->').map((part) => part.trim())
+        const renderedLeft = renderInlineContent(left)
+        const renderedRight = renderInlineContent(right)
+        renderedLines.push(
+          <p key={`arrow-map-${idx}`} className="study-line study-arrow-map-line">
+            <span className="study-line-key">{renderedLeft}</span>
+            <span className="study-arrow-map">-&gt;</span>
+            <span>{renderedRight}</span>
+          </p>
+        )
+        continue
+      }
+
+      const rendered = renderInlineContent(line)
+      renderedLines.push(<p key={`plain-${idx}`} className="study-line">{rendered}</p>)
+    }
+
+    return <div className="study-rich-text">{renderedLines}</div>
+  }
+
+  const activeChat = useMemo(() => {
+    const found = chatThreads.find((thread) => thread.id === activeChatId)
+    return found || chatThreads[0]
+  }, [chatThreads, activeChatId])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const cutoff = Date.now() - CHAT_RETENTION_MS
+    const threadsToKeep = chatThreads
+      .filter((thread) => Number(thread?.updatedAt || 0) >= cutoff)
+      .sort((a, b) => Number(b?.updatedAt || 0) - Number(a?.updatedAt || 0))
+
+    const persistedThreads = threadsToKeep.length ? threadsToKeep : [createChatThreadRecord()]
+    const persistedActiveId = persistedThreads.some((thread) => thread.id === activeChatId)
+      ? activeChatId
+      : persistedThreads[0].id
+
+    window.localStorage.setItem(
+      CHAT_STORAGE_KEY,
+      JSON.stringify({
+        activeId: persistedActiveId,
+        threads: persistedThreads,
+      })
+    )
+  }, [chatThreads, activeChatId])
+
+  const createChatThread = (title = 'New chat') => ({
+    ...createChatThreadRecord(title),
+  })
+
+  const makeChatTitle = (text) => {
+    const words = text
+      .replace(/[?!.,:;()[\]{}"']/g, ' ')
+      .split(/\s+/)
+      .map((word) => word.trim())
+      .filter(Boolean)
+
+    const stopWords = new Set(['the', 'is', 'are', 'a', 'an', 'to', 'of', 'and', 'or', 'in', 'on', 'for', 'why', 'what', 'how', 'does', 'do', 'this', 'that', 'problem', 'problem?'])
+    const selected = words.filter((word) => !stopWords.has(word.toLowerCase())).slice(0, 5)
+    const titleWords = (selected.length ? selected : words.slice(0, 4)).slice(0, 5)
+    const title = titleWords.join(' ').replace(/\s+/g, ' ').trim()
+    return title ? title.charAt(0).toUpperCase() + title.slice(1) : 'New chat'
+  }
+
+  const upsertThread = (threadId, updater) => {
+    setChatThreads((prev) => {
+      const next = prev.map((thread) => (thread.id === threadId ? updater(thread) : thread))
+      return next.sort((a, b) => b.updatedAt - a.updatedAt)
+    })
+  }
+
+  const deleteChatThread = (threadId) => {
+    let nextActiveId = null
+    setChatThreads((prev) => {
+      const remaining = prev.filter((thread) => thread.id !== threadId)
+      if (!remaining.length) {
+        const thread = createChatThread()
+        nextActiveId = thread.id
+        return [thread]
+      }
+
+      if (threadId === activeChatId) {
+        nextActiveId = remaining[0].id
+      }
+
+      return remaining
+    })
+    if (nextActiveId) {
+      setActiveChatId(nextActiveId)
+    }
+    setChatMenu(null)
+  }
+
+  const createNewChat = () => {
+    const thread = createChatThread()
+    setChatThreads((prev) => [thread, ...prev])
+    setActiveChatId(thread.id)
+    setAssistantError('')
+    setAssistantQuery('')
+  }
+
+  const askAssistant = async () => {
+    const question = assistantQuery.trim()
+    if (!question) {
+      setAssistantError('Enter a question to ask the tutor.')
+      return
+    }
+
+    if (!activeChat) {
+      setAssistantError('Unable to find active chat. Start a new chat and try again.')
+      return
+    }
+
+    const userMessage = {
+      id: `msg-${Date.now()}-user`,
+      role: 'user',
+      text: question,
+    }
+
+    const generatedTitle = makeChatTitle(question)
+
+    upsertThread(activeChat.id, (thread) => ({
+      ...thread,
+      title: thread.messages.length ? thread.title : generatedTitle,
+      updatedAt: Date.now(),
+      messages: [...thread.messages, userMessage],
+    }))
+
+    setAssistantQuery('')
+
+    setAssistantLoading(true)
+    setAssistantError('')
+    try {
+      const res = await api.studyAssistantAsk({
+        question,
+        module_key: activeTopic,
+        detailed: assistantDetailed,
+        session_id: activeChat.sessionId,
+      })
+
+      const assistantMessage = {
+        id: `msg-${Date.now()}-assistant`,
+        role: 'assistant',
+        text: res?.answer || 'No response received from tutor.',
+        relevantModuleTitle: res?.relevant_module_title || '',
+        isCurrentModule: Boolean(res?.is_current_module),
+        sources: Array.isArray(res?.sources) ? res.sources : [],
+      }
+
+      upsertThread(activeChat.id, (thread) => ({
+        ...thread,
+        sessionId: res?.session_id || thread.sessionId,
+        updatedAt: Date.now(),
+        messages: [...thread.messages, assistantMessage],
+      }))
+    } catch (err) {
+      setAssistantError(err?.message || 'Study assistant request failed.')
+    } finally {
+      setAssistantLoading(false)
+    }
+  }
 
   return (
-    <>
+    <div className="study-mode-context" data-assistant-context={assistantContext}>
       <div className="study-pill-nav-wrap">
         <PillNav
           items={studyItems}
@@ -4380,19 +5849,19 @@ function StudyModeModule() {
       {/* Sections with Study Content */}
       {selected.sections.map((section, idx) => (
         <Section key={idx} title={section.heading}>
-          <p className="module-note" style={{ whiteSpace: 'pre-wrap' }}>
-            {section.text}
-          </p>
-          {section.formula && (
-            <div style={{ background: '#f0f0f0', padding: '12px', borderRadius: '4px', margin: '12px 0', fontFamily: 'monospace', fontSize: '12px', whiteSpace: 'pre-wrap' }}>
-              {section.formula}
+          {renderStudyText(section.text)}
+          {section.formula ? renderDisplayMathBlock(section.formula, `section-formula-${idx}`) : null}
+          {(inlineSectionGraphs[section.heading] || []).map((graph, graphIdx) => (
+            <div className="study-inline-graph" key={`${section.heading}-${graph.title}-${graphIdx}`}>
+              <p className="study-inline-graph-title">{graph.title}</p>
+              {graph.render()}
             </div>
-          )}
+          ))}
         </Section>
       ))}
 
       {/* Graphs */}
-      {selected.graphs && selected.graphs.map((graph, idx) => (
+      {trailingGraphs.map((graph, idx) => (
         <Section key={`graph-${idx}`} title={graph.title}>
           {graph.render()}
         </Section>
@@ -4407,18 +5876,197 @@ function StudyModeModule() {
           <li>Document key insights and implementation notes for future reference.</li>
         </ol>
       </Section>
-    </>
+
+      <section className="module-quiz-cta-card" aria-label="Study mode quiz">
+        <div>
+          <p className="module-quiz-cta-kicker">End of module check</p>
+          <h2>Ready for Quiz?</h2>
+          <p>Pass the 20-question assessment for the currently selected study topic to lock in the checkpoint.</p>
+        </div>
+        <button
+          type="button"
+          className="module-action-btn primary"
+          onClick={() => onStartQuiz?.(studyQuizTargets[activeTopic] || 'Perceptron')}
+        >
+          Ready for Quiz?
+        </button>
+      </section>
+
+      <button
+        className="nexusai-launcher"
+        type="button"
+        onClick={() => setChatOpen(true)}
+        aria-label="Open NexusAI tutor"
+      >
+        <img src="/nexus_popup.svg" alt="NexusAI" className="nexusai-launcher-logo" />
+      </button>
+
+      {chatOpen ? (
+        <div className={`nexusai-chat-shell ${assistantFullscreen ? 'fullscreen' : ''}`}>
+          <div className="nexusai-chat-header">
+            <div className="nexusai-chat-brand">
+              <img src="/nexusai.svg" alt="NexusAI" className="nexusai-chat-brand-logo" />
+              <span>NexusAI</span>
+            </div>
+            <div className="nexusai-chat-actions">
+              <button
+                type="button"
+                className="nexusai-icon-btn"
+                data-tooltip={assistantFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                onClick={() => setAssistantFullscreen((prev) => !prev)}
+                aria-label={assistantFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 10V3h7v2H5v5H3zm16 0V5h-5V3h7v7h-2zM3 14h2v5h5v2H3v-7zm16 5v-5h2v7h-7v-2h5z" fill="currentColor" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="nexusai-icon-btn"
+                data-tooltip={historyHidden ? 'Show chat history' : 'Hide chat history'}
+                onClick={() => setHistoryHidden((prev) => !prev)}
+                aria-label={historyHidden ? 'Show chat history' : 'Hide chat history'}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h10v2H4v-2z" fill="currentColor" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="nexusai-icon-btn"
+                data-tooltip="Close chat"
+                onClick={() => setChatOpen(false)}
+                aria-label="Close chat"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M18.3 5.71 12 12l6.3 6.29-1.41 1.42L10.59 13.4 4.29 19.7 2.88 18.3 9.17 12 2.88 5.71 4.29 4.29l6.3 6.3 6.29-6.3z" fill="currentColor" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div className="nexusai-chat-body">
+            <aside className={`nexusai-history ${historyHidden ? 'hidden' : ''}`}>
+              <button type="button" className="nexusai-new-chat" onClick={createNewChat} aria-label="Create new chat" title="New chat">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5z" fill="currentColor" />
+                </svg>
+              </button>
+              {chatThreads.map((thread) => (
+                <div
+                  key={thread.id}
+                  className={`nexusai-history-row ${thread.id === activeChatId ? 'active' : ''}`}
+                >
+                  <button
+                    type="button"
+                    className="nexusai-history-item"
+                    onClick={() => setActiveChatId(thread.id)}
+                    onContextMenu={(e) => {
+                      e.preventDefault()
+                      setChatMenu({ threadId: thread.id, x: e.clientX, y: e.clientY })
+                    }}
+                  >
+                    <span>{thread.title || 'New chat'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="nexusai-history-delete"
+                    onClick={() => deleteChatThread(thread.id)}
+                    aria-label={`Delete chat ${thread.title || 'New chat'}`}
+                    title="Delete chat"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </aside>
+
+            <div className="nexusai-conversation">
+              <div className="nexusai-message-stream">
+                {activeChat?.messages?.length ? activeChat.messages.map((msg) => (
+                  <div key={msg.id} className={`nexusai-message ${msg.role === 'user' ? 'user' : 'assistant'}`}>
+                    {msg.role === 'assistant' ? (
+                      <>
+                        {msg.relevantModuleTitle ? (
+                          <p className="assistant-module-note">
+                            {msg.isCurrentModule ? 'Current module' : 'Matched module'}: {msg.relevantModuleTitle}
+                          </p>
+                        ) : null}
+                        <div className="assistant-response-text">{renderStudyText(msg.text)}</div>
+                        {msg.sources?.length ? (
+                          <details className="nexusai-source-block">
+                            <summary>Grounding sources</summary>
+                            {msg.sources.map((source, idx) => (
+                              <p key={`${msg.id}-src-${idx}`} className="module-note">{idx + 1}. {source}</p>
+                            ))}
+                          </details>
+                        ) : null}
+                      </>
+                    ) : (
+                      <p>{msg.text}</p>
+                    )}
+                  </div>
+                )) : <p className="module-note">Ask any deep learning or neural network question to start.</p>}
+
+                {assistantLoading ? (
+                  <div className="nexusai-message assistant typing">
+                    <div className="nexusai-typing-row" aria-label="Tutor is thinking">
+                      <span className="nexusai-typing-dot" />
+                      <span className="nexusai-typing-dot" />
+                      <span className="nexusai-typing-dot" />
+                    </div>
+                    <p className="nexusai-typing-label">NexusAI is thinking...</p>
+                  </div>
+                ) : null}
+              </div>
+
+              {assistantError ? <p className="module-note nexusai-error">{assistantError}</p> : null}
+
+              <div className="nexusai-input-wrap">
+                <textarea
+                  rows={assistantFullscreen ? 4 : 3}
+                  value={assistantQuery}
+                  onChange={(e) => setAssistantQuery(e.target.value)}
+                  placeholder="Ask NexusAI anything about deep learning or neural networks..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      askAssistant()
+                    }
+                  }}
+                />
+                <div className="nexusai-input-actions">
+                  <label className="module-field checkbox-field" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="checkbox"
+                      checked={assistantDetailed}
+                      onChange={(e) => setAssistantDetailed(e.target.checked)}
+                    />
+                    <span style={{ textTransform: 'none' }}>Detailed</span>
+                  </label>
+                  <button className="module-action-btn primary" onClick={askAssistant} disabled={assistantLoading}>
+                    {assistantLoading ? 'Thinking...' : 'Send'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
   )
 }
 
-function ModulePage({ activeModule, moduleDescription }) {
+function ModulePage({ activeModule, moduleDescription, onStartQuiz, quizRecord }) {
+  const quizCompleted = Boolean(quizRecord?.completed)
+
   const content = () => {
     if (activeModule === 'Perceptron') return <PerceptronAndMLPModule />
     if (activeModule === 'Neural Flow Engine') return <NeuralFlowEngineModule />
     if (activeModule === 'CNN Lab') return <CNNLabModule />
     if (activeModule === 'RNN Lab') return <RNNModule />
     if (activeModule === 'Hopfield Network') return <HopfieldModule />
-    return <StudyModeModule />
+    return <StudyModeModule onStartQuiz={onStartQuiz} />
   }
 
   return (
@@ -4428,7 +6076,7 @@ function ModulePage({ activeModule, moduleDescription }) {
           <h1>{activeModule}</h1>
           {moduleDescription ? <p>{moduleDescription}</p> : null}
         </div>
-        <span className="badge">DeepNexus</span>
+        <span className={quizCompleted ? 'badge success' : 'badge'}>{quizCompleted ? 'Completed' : 'DeepNexus'}</span>
       </header>
 
       <div className="module-plain-layout">
@@ -4438,41 +6086,910 @@ function ModulePage({ activeModule, moduleDescription }) {
   )
 }
 
-function App() {
-  const [activeModule, setActiveModule] = useState(null)
-  const [menuOpen, setMenuOpen] = useState(false)
+function AuthPage({ initialName, initialEmail, initialPassword, onSignIn }) {
+  const [username, setUsername] = useState(initialName || 'Learner')
+  const [email] = useState(initialEmail || 'demo@deepnexus.ai')
+  const [password] = useState(initialPassword || 'demo123')
+  const [error, setError] = useState('')
 
-  const moduleDescription = useMemo(() => (activeModule ? MODULE_DESCRIPTIONS[activeModule] : ''), [activeModule])
-
-  const handleMenuSelect = (item) => {
-    setMenuOpen(false)
-    if (item.moduleName === '__HOME__') {
-      setActiveModule(null)
+  const handleSubmit = (event) => {
+    event.preventDefault()
+    if (!username.trim()) {
+      setError('Username cannot be empty.')
       return
     }
-    setActiveModule(item.moduleName)
+
+    const success = onSignIn?.({ username: username.trim(), email, password })
+    if (!success) {
+      setError('Demo credentials mismatch. Use the default email and password.')
+    }
+  }
+
+  return (
+    <main className="auth-page">
+      <section className="auth-card" aria-label="Sign in">
+        <p className="auth-kicker">Demo Access</p>
+        <h1>Sign in to your profile</h1>
+        <p className="auth-note">Use the prefilled demo credentials. Username is editable for personalization.</p>
+
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label className="auth-field">
+            <span>Username</span>
+            <input type="text" value={username} onChange={(event) => setUsername(event.target.value)} />
+          </label>
+
+          <label className="auth-field">
+            <span>Email</span>
+            <input type="email" value={email} readOnly />
+          </label>
+
+          <label className="auth-field">
+            <span>Password</span>
+            <input type="password" value={password} readOnly />
+          </label>
+
+          {error ? <p className="auth-error">{error}</p> : null}
+
+          <button type="submit" className="module-action-btn primary">Sign in</button>
+        </form>
+      </section>
+    </main>
+  )
+}
+
+function ProfilePage({ profile, onSaveProfile, onLogout, quizProgressMap, activityLog }) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [draftProfile, setDraftProfile] = useState(profile)
+  const [hoveredPoint, setHoveredPoint] = useState(null)
+
+  useEffect(() => {
+    setDraftProfile(profile)
+  }, [profile])
+  const assessedModules = ['Perceptron', 'Neural Flow Engine', 'CNN Lab', 'RNN Lab', 'Hopfield Network']
+  const completedCount = assessedModules.filter((moduleName) => Boolean(quizProgressMap?.[moduleName]?.completed)).length
+
+  const attempts = Object.values(quizProgressMap || {})
+    .filter((entry) => Number(entry?.total || 0) > 0)
+    .sort((left, right) => Number(left.updatedAt || 0) - Number(right.updatedAt || 0))
+
+  const recentAttempts = attempts.slice(-8)
+  const averagePercent = attempts.length
+    ? Math.round(attempts.reduce((total, entry) => total + ((Number(entry.score || 0) / Number(entry.total || 1)) * 100), 0) / attempts.length)
+    : 0
+
+  const activityFeed = (activityLog || []).slice(0, 5)
+
+  const initials = (profile?.name || 'L')
+    .split(' ')
+    .map((chunk) => chunk.trim()[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
+
+  const chartWidth = 760
+  const chartHeight = 240
+  const chartPadding = 28
+
+  const chartPoints = recentAttempts.map((entry, index) => {
+    const xRatio = recentAttempts.length > 1 ? index / (recentAttempts.length - 1) : 0.5
+    const scorePercent = (Number(entry.score || 0) / Number(entry.total || 1)) * 100
+    return {
+      x: chartPadding + xRatio * (chartWidth - chartPadding * 2),
+      y: chartHeight - chartPadding - (scorePercent / 100) * (chartHeight - chartPadding * 2),
+      label: entry.module,
+      scoreLabel: `${Math.round(scorePercent)}%`,
+      attemptedAt: Number(entry.updatedAt || 0),
+    }
+  })
+
+  const formatActivityTime = (timestamp) => {
+    if (!timestamp) return 'just now'
+    try {
+      return new Date(timestamp).toLocaleString()
+    } catch {
+      return 'just now'
+    }
+  }
+
+  const handleEditToggle = () => {
+    if (isEditing) {
+      const saved = onSaveProfile?.({
+        ...draftProfile,
+        name: draftProfile?.name?.trim() || profile?.name || 'Learner',
+      })
+      if (saved === false) {
+        return
+      }
+    }
+    setIsEditing((previous) => !previous)
+  }
+
+  return (
+    <main className="profile-page">
+      <section className="profile-shell" aria-label="Profile overview">
+        <article className="profile-identity-card">
+          <div className="profile-identity-head">
+            <div className="profile-avatar" aria-hidden="true">{initials || 'L'}</div>
+            <div className="profile-identity-main">
+              <p className="profile-kicker">Learner Profile</p>
+              {isEditing ? (
+                <input
+                  className="profile-identity-name-input"
+                  type="text"
+                  value={draftProfile?.name || ''}
+                  onChange={(event) => setDraftProfile((previous) => ({ ...previous, name: event.target.value }))}
+                />
+              ) : (
+                <h1>{profile.name || 'Learner'}</h1>
+              )}
+              <p className="profile-subtitle">{profile.focusTrack || 'Neural learning journey in progress'}</p>
+            </div>
+            <div className="profile-action-row">
+              <button
+                type="button"
+                className="profile-edit-btn"
+                onClick={handleEditToggle}
+                aria-label={isEditing ? 'Save profile details' : 'Edit profile details'}
+                title={isEditing ? 'Save' : 'Edit'}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.04a1 1 0 0 0 0-1.41l-2.5-2.5a1 1 0 0 0-1.41 0l-1.84 1.84 3.75 3.75 2-2.09z" fill="currentColor" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="profile-logout-btn"
+                onClick={onLogout}
+                aria-label="Log out"
+                title="Log out"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+
+          <div className="profile-identity-fields">
+            <label className="profile-field">
+              <span>Email</span>
+              {isEditing ? (
+                <input type="email" value={draftProfile?.email || ''} onChange={(event) => setDraftProfile((previous) => ({ ...previous, email: event.target.value }))} />
+              ) : (
+                <p>{profile.email}</p>
+              )}
+            </label>
+            <label className="profile-field">
+              <span>Weekly Goal</span>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={draftProfile?.weeklyGoal || ''}
+                  onChange={(event) => setDraftProfile((previous) => ({ ...previous, weeklyGoal: event.target.value }))}
+                />
+              ) : (
+                <p>{profile.weeklyGoal}</p>
+              )}
+            </label>
+          </div>
+        </article>
+
+        <section className="profile-lower-grid" aria-label="Activity and progress">
+          <article className="profile-panel">
+            <h2>Recent Activity</h2>
+            {activityFeed.length ? (
+              <ul className="profile-activity-list">
+                {activityFeed.map((item) => (
+                  <li key={item.id} className="profile-activity-item">
+                    <p>{item.detail}</p>
+                    <span>{formatActivityTime(item.timestamp)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="profile-empty">No activity yet. Open modules and take quizzes to build your timeline.</p>
+            )}
+          </article>
+
+          <article className="profile-panel">
+            <h2>Progress</h2>
+            <p className="profile-progress-number">{completedCount}/{assessedModules.length}</p>
+            <p className="profile-progress-label">Core modules completed</p>
+            <div className="profile-progress-track" aria-label="Module completion">
+              <div className="profile-progress-fill" style={{ width: `${Math.round((completedCount / assessedModules.length) * 100)}%` }} />
+            </div>
+            <p className="profile-progress-label">Average quiz score: {averagePercent}%</p>
+          </article>
+        </section>
+
+        <article className="profile-panel profile-chart-panel" aria-label="Performance tracker">
+          <h2>Performance Tracker</h2>
+          <p className="profile-chart-note">Recent quiz marks over time</p>
+          {chartPoints.length ? (
+            <div className="profile-chart-wrap">
+              <svg
+                className="profile-chart"
+                viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                role="img"
+                aria-label="Recent quiz marks line chart"
+                onMouseLeave={() => setHoveredPoint(null)}
+              >
+                <line x1={chartPadding} y1={chartHeight - chartPadding} x2={chartWidth - chartPadding} y2={chartHeight - chartPadding} className="profile-axis" />
+                <line x1={chartPadding} y1={chartPadding} x2={chartPadding} y2={chartHeight - chartPadding} className="profile-axis" />
+                <polyline points={chartPoints.map((point) => `${point.x},${point.y}`).join(' ')} className="profile-chart-line" />
+                {chartPoints.map((point, index) => (
+                  <g key={`${point.label}-${index}`}>
+                    <circle
+                      cx={point.x}
+                      cy={point.y}
+                      r="10"
+                      className="profile-chart-hit-area"
+                      onMouseEnter={() => setHoveredPoint(point)}
+                      onFocus={() => setHoveredPoint(point)}
+                      onBlur={() => setHoveredPoint(null)}
+                    />
+                    <circle cx={point.x} cy={point.y} r="4" className="profile-chart-dot" style={{ animationDelay: `${index * 100}ms` }} />
+                    <text x={point.x} y={point.y - 10} className="profile-chart-score">{point.scoreLabel}</text>
+                  </g>
+                ))}
+              </svg>
+
+              {hoveredPoint ? (
+                <div
+                  className="profile-chart-tooltip"
+                  style={{
+                    left: `${(hoveredPoint.x / chartWidth) * 100}%`,
+                    top: `${(hoveredPoint.y / chartHeight) * 100}%`,
+                  }}
+                >
+                  <p className="profile-chart-tooltip-title">{hoveredPoint.label}</p>
+                  <p>Score: {hoveredPoint.scoreLabel}</p>
+                  <p>Attempted: {formatActivityTime(hoveredPoint.attemptedAt)}</p>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <p className="profile-empty">No quiz attempts yet. Your score graph will appear here.</p>
+          )}
+        </article>
+      </section>
+    </main>
+  )
+}
+
+function App() {
+  const PROFILE_STORAGE_KEY = 'deepnexus.profile.settings.v1'
+  const AUTH_STORAGE_KEY = 'deepnexus.auth.session.v1'
+  const ACTIVITY_STORAGE_KEY = 'deepnexus.activity.log.v1'
+  const DEMO_EMAIL = 'demo@deepnexus.ai'
+  const DEMO_PASSWORD = 'demo123'
+
+  const [activeModule, setActiveModule] = useState(null)
+  const [lastVisitedModule, setLastVisitedModule] = useState(null)
+  const [dataEngineReturnModule, setDataEngineReturnModule] = useState(null)
+  const [activeScreen, setActiveScreen] = useState('home')
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [routeLoaderPhase, setRouteLoaderPhase] = useState('idle')
+  const [quizProgressRecords, setQuizProgressRecords] = useState(() => loadQuizProgress())
+  const [userProfiles, setUserProfiles] = useState(() => {
+    if (typeof window === 'undefined') {
+      return {
+        Learner: {
+          name: 'Learner',
+          email: DEMO_EMAIL,
+          weeklyGoal: 'Complete 2 module quizzes this week',
+          focusTrack: 'Full Stack Neural Learning',
+        },
+      }
+    }
+
+    try {
+      const raw = window.localStorage.getItem(PROFILE_STORAGE_KEY)
+      const parsed = raw ? JSON.parse(raw) : null
+
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.name) {
+        const legacyName = String(parsed.name || 'Learner')
+        return {
+          [legacyName]: {
+            name: legacyName,
+            email: parsed.email || DEMO_EMAIL,
+            weeklyGoal: parsed.weeklyGoal || 'Complete 2 module quizzes this week',
+            focusTrack: parsed.focusTrack || 'Full Stack Neural Learning',
+          },
+        }
+      }
+
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed
+      }
+
+      return {
+        Learner: {
+          name: 'Learner',
+          email: DEMO_EMAIL,
+          weeklyGoal: 'Complete 2 module quizzes this week',
+          focusTrack: 'Full Stack Neural Learning',
+        },
+      }
+    } catch {
+      return {
+        Learner: {
+          name: 'Learner',
+          email: DEMO_EMAIL,
+          weeklyGoal: 'Complete 2 module quizzes this week',
+          focusTrack: 'Full Stack Neural Learning',
+        },
+      }
+    }
+  })
+
+  const [authSession, setAuthSession] = useState(() => {
+    if (typeof window === 'undefined') {
+      return { signedIn: false, username: '' }
+    }
+
+    try {
+      const raw = window.localStorage.getItem(AUTH_STORAGE_KEY)
+      const parsed = raw ? JSON.parse(raw) : null
+      return {
+        signedIn: Boolean(parsed?.signedIn),
+        username: typeof parsed?.username === 'string' ? parsed.username : '',
+      }
+    } catch {
+      return { signedIn: false, username: '' }
+    }
+  })
+
+  const [activityLogsByUser, setActivityLogsByUser] = useState(() => {
+    if (typeof window === 'undefined') return {}
+
+    try {
+      const raw = window.localStorage.getItem(ACTIVITY_STORAGE_KEY)
+      const parsed = raw ? JSON.parse(raw) : []
+
+      if (Array.isArray(parsed)) {
+        return {
+          Learner: parsed,
+        }
+      }
+
+      if (parsed && typeof parsed === 'object') {
+        return parsed
+      }
+
+      return {}
+    } catch {
+      return {}
+    }
+  })
+  const ROUTE_LOADER_VISIBLE_MS = 520
+  const ROUTE_LOADER_FADE_MS = 320
+  const routeTimerRef = useRef(null)
+  const routeHideTimerRef = useRef(null)
+
+  const currentUsername = authSession.username || 'Learner'
+  const currentProfile = userProfiles[currentUsername] || {
+    name: currentUsername,
+    email: DEMO_EMAIL,
+    weeklyGoal: 'Complete 2 module quizzes this week',
+    focusTrack: 'Full Stack Neural Learning',
+  }
+  const currentActivityLog = activityLogsByUser[currentUsername] || []
+
+  const moduleDescription = useMemo(() => (activeModule ? MODULE_DESCRIPTIONS[activeModule] : ''), [activeModule])
+  const quizProgressMap = useMemo(
+    () => getQuizProgressMap(
+      quizProgressRecords.filter((record) => {
+        if (record.user_id === currentUsername) return true
+        return currentUsername === 'Learner' && (!record.user_id || record.user_id === 'local-user')
+      })
+    ),
+    [quizProgressRecords, currentUsername]
+  )
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(userProfiles))
+  }, [userProfiles])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authSession))
+  }, [authSession])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(ACTIVITY_STORAGE_KEY, JSON.stringify(activityLogsByUser))
+  }, [activityLogsByUser])
+
+  useEffect(
+    () => () => {
+      if (routeTimerRef.current) {
+        clearTimeout(routeTimerRef.current)
+      }
+      if (routeHideTimerRef.current) {
+        clearTimeout(routeHideTimerRef.current)
+      }
+    },
+    []
+  )
+
+  const transitionTo = (nextScreen, nextModule = null) => {
+    setMenuOpen(false)
+    if (routeTimerRef.current) {
+      clearTimeout(routeTimerRef.current)
+    }
+    if (routeHideTimerRef.current) {
+      clearTimeout(routeHideTimerRef.current)
+    }
+
+    setRouteLoaderPhase('visible')
+
+    routeTimerRef.current = setTimeout(() => {
+      setActiveScreen(nextScreen)
+      setActiveModule(nextModule)
+      setRouteLoaderPhase('leaving')
+      routeHideTimerRef.current = setTimeout(() => {
+        setRouteLoaderPhase('idle')
+        routeHideTimerRef.current = null
+      }, ROUTE_LOADER_FADE_MS)
+      routeTimerRef.current = null
+    }, ROUTE_LOADER_VISIBLE_MS)
+  }
+
+  const navigateWithLoader = (nextModule) => {
+    if (nextModule) {
+      setLastVisitedModule(nextModule)
+    }
+    transitionTo(nextModule ? 'module' : 'home', nextModule)
+  }
+
+  const appendActivity = (detail, username = currentUsername) => {
+    if (!username) return
+
+    setActivityLogsByUser((previous) => {
+      const history = previous[username] || []
+      return {
+        ...previous,
+        [username]: [
+          {
+            id: `activity-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            timestamp: Date.now(),
+            detail,
+          },
+          ...history,
+        ].slice(0, 80),
+      }
+    })
+  }
+
+  const navigateToProfile = () => {
+    if (authSession.signedIn) {
+      transitionTo('profile', null)
+      return
+    }
+    transitionTo('auth', null)
+  }
+
+  const navigateToQuiz = (moduleName) => {
+    if (!moduleName) return
+    appendActivity(`Started ${moduleName} quiz`)
+    transitionTo('quiz', moduleName)
+  }
+
+  const handleQuizFinish = (record) => {
+    const nextRecords = upsertQuizProgress({ ...record, user_id: currentUsername })
+    setQuizProgressRecords(nextRecords)
+    appendActivity(`Scored ${record.score}/${record.total} in ${record.module} quiz`)
+  }
+
+  const handleMenuSelect = (item) => {
+    if (!item?.moduleName) return
+    if (item.moduleName === '__HOME__') {
+      navigateWithLoader(null)
+      return
+    }
+    if (item.moduleName === 'Data Engine') {
+      setDataEngineReturnModule(lastVisitedModule || activeModule)
+      appendActivity('Opened Data Engine module')
+      transitionTo('data-engine', null)
+      return
+    }
+    appendActivity(`Opened ${item.moduleName} module`)
+    navigateWithLoader(item.moduleName)
+  }
+
+  const handleSignIn = ({ username, email, password }) => {
+    if (email !== DEMO_EMAIL || password !== DEMO_PASSWORD) {
+      return false
+    }
+
+    const normalizedUsername = username.trim() || 'Learner'
+
+    setUserProfiles((previous) => {
+      if (previous[normalizedUsername]) {
+        return previous
+      }
+
+      return {
+        ...previous,
+        [normalizedUsername]: {
+          name: normalizedUsername,
+          email,
+          weeklyGoal: 'Complete 2 module quizzes this week',
+          focusTrack: 'Full Stack Neural Learning',
+        },
+      }
+    })
+
+    setAuthSession({ signedIn: true, username: normalizedUsername })
+    appendActivity('Signed in to profile (demo)', normalizedUsername)
+    transitionTo('profile', null)
+    return true
+  }
+
+  const handleSaveProfile = (nextProfile) => {
+    const targetUsername = String(nextProfile?.name || '').trim()
+    if (!targetUsername) {
+      return false
+    }
+
+    if (targetUsername !== currentUsername) {
+      setUserProfiles((previous) => {
+        if (previous[targetUsername]) {
+          return previous
+        }
+
+        return {
+          ...previous,
+          [targetUsername]: {
+            name: targetUsername,
+            email: nextProfile?.email || DEMO_EMAIL,
+            weeklyGoal: nextProfile?.weeklyGoal || 'Complete 2 module quizzes this week',
+            focusTrack: nextProfile?.focusTrack || 'Full Stack Neural Learning',
+          },
+        }
+      })
+
+      setAuthSession({ signedIn: true, username: targetUsername })
+      appendActivity('Profile created by username switch', targetUsername)
+      return true
+    }
+
+    setUserProfiles((previous) => ({
+      ...previous,
+      [currentUsername]: {
+        ...previous[currentUsername],
+        ...nextProfile,
+        name: currentUsername,
+      },
+    }))
+
+    appendActivity('Updated profile details')
+    return true
+  }
+
+  const handleLogout = () => {
+    appendActivity('Logged out')
+    setAuthSession({ signedIn: false, username: '' })
+    transitionTo('home', null)
   }
 
   const goHome = () => {
-    setMenuOpen(false)
-    setActiveModule(null)
+    transitionTo('home', null)
   }
 
-  if (activeModule === null) {
+  const scrollHomeTo = (id) => {
+    if (typeof window === 'undefined') return
+    setMenuOpen(false)
+    const el = document.getElementById(id)
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  if (activeScreen === 'auth') {
     return (
       <div className="app-wrapper">
         <header className="navbar">
           <div className="navbar-brand">DeepNexus</div>
-          <a className="github-link" href={GITHUB_URL} target="_blank" rel="noreferrer" aria-label="View on Github" data-tooltip="View on Github">
-            <svg viewBox="0 0 24 24" aria-hidden="true" className="github-icon">
+
+          <nav className="navbar-nav" aria-label="Auth navigation">
+            <button type="button" className="navbar-nav-item" onClick={goHome}>
+              Home
+            </button>
+          </nav>
+
+          <div className="navbar-action-group">
+            <button
+              type="button"
+              className="profile-link"
+              onClick={navigateToProfile}
+              aria-label="Open profile"
+              data-tooltip="Profile"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="profile-icon">
+                <path
+                  fill="currentColor"
+                  d="M12 12.2a4.2 4.2 0 1 0-4.2-4.2A4.2 4.2 0 0 0 12 12.2zm0 2.2c-3.42 0-8 1.72-8 5.2V22h16v-.4c0-3.48-4.58-5.2-8-5.2z"
+                />
+              </svg>
+            </button>
+            <a className="github-link" href={GITHUB_URL} target="_blank" rel="noreferrer" aria-label="View on Github" data-tooltip="View on Github">
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="github-icon">
+                <path
+                  fill="currentColor"
+                  d="M12 .5C5.65.5.5 5.66.5 12.03c0 5.1 3.3 9.43 7.88 10.96.58.1.79-.25.79-.56 0-.28-.01-1.01-.02-1.99-3.2.7-3.88-1.54-3.88-1.54-.53-1.35-1.3-1.72-1.3-1.72-1.06-.73.08-.71.08-.71 1.18.08 1.8 1.21 1.8 1.21 1.04 1.8 2.74 1.28 3.4.98.1-.76.41-1.28.74-1.58-2.55-.29-5.24-1.28-5.24-5.67 0-1.25.45-2.28 1.18-3.09-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.16 1.18a10.9 10.9 0 0 1 5.76 0c2.19-1.49 3.16-1.18 3.16-1.18.62 1.58.23 2.75.11 3.04.74.81 1.18 1.84 1.18 3.09 0 4.4-2.69 5.38-5.26 5.67.42.36.79 1.06.79 2.14 0 1.55-.01 2.8-.01 3.18 0 .31.21.67.8.56A11.54 11.54 0 0 0 23.5 12.03C23.5 5.66 18.35.5 12 .5Z"
+                />
+              </svg>
+            </a>
+          </div>
+        </header>
+
+        <AuthPage
+          initialName={currentProfile.name}
+          initialEmail={DEMO_EMAIL}
+          initialPassword={DEMO_PASSWORD}
+          onSignIn={handleSignIn}
+        />
+
+        {routeLoaderPhase !== 'idle' ? (
+          <div
+            className={routeLoaderPhase === 'leaving' ? 'app-route-loader leaving' : 'app-route-loader visible'}
+            role="status"
+            aria-live="polite"
+            aria-label="Loading next section"
+          >
+            <NeuralOrbitLoader />
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+
+  if (activeScreen === 'profile') {
+    return (
+      <div className="app-wrapper">
+        <header className="navbar">
+          <div className="navbar-brand">DeepNexus</div>
+
+          <nav className="navbar-nav" aria-label="Home navigation">
+            <button type="button" className="navbar-nav-item" onClick={goHome}>
+              Home
+            </button>
+          </nav>
+
+          <div className="navbar-action-group">
+            <button
+              type="button"
+              className="profile-link"
+              onClick={navigateToProfile}
+              aria-label="Open profile"
+              data-tooltip="Profile"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="profile-icon">
+                <path
+                  fill="currentColor"
+                  d="M12 12.2a4.2 4.2 0 1 0-4.2-4.2A4.2 4.2 0 0 0 12 12.2zm0 2.2c-3.42 0-8 1.72-8 5.2V22h16v-.4c0-3.48-4.58-5.2-8-5.2z"
+                />
+              </svg>
+            </button>
+            <a className="github-link" href={GITHUB_URL} target="_blank" rel="noreferrer" aria-label="View on Github" data-tooltip="View on Github">
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="github-icon">
+                <path
+                  fill="currentColor"
+                  d="M12 .5C5.65.5.5 5.66.5 12.03c0 5.1 3.3 9.43 7.88 10.96.58.1.79-.25.79-.56 0-.28-.01-1.01-.02-1.99-3.2.7-3.88-1.54-3.88-1.54-.53-1.35-1.3-1.72-1.3-1.72-1.06-.73.08-.71.08-.71 1.18.08 1.8 1.21 1.8 1.21 1.04 1.8 2.74 1.28 3.4.98.1-.76.41-1.28.74-1.58-2.55-.29-5.24-1.28-5.24-5.67 0-1.25.45-2.28 1.18-3.09-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.16 1.18a10.9 10.9 0 0 1 5.76 0c2.19-1.49 3.16-1.18 3.16-1.18.62 1.58.23 2.75.11 3.04.74.81 1.18 1.84 1.18 3.09 0 4.4-2.69 5.38-5.26 5.67.42.36.79 1.06.79 2.14 0 1.55-.01 2.8-.01 3.18 0 .31.21.67.8.56A11.54 11.54 0 0 0 23.5 12.03C23.5 5.66 18.35.5 12 .5Z"
+                />
+              </svg>
+            </a>
+          </div>
+        </header>
+
+        <ProfilePage
+          profile={currentProfile}
+          onSaveProfile={handleSaveProfile}
+          onLogout={handleLogout}
+          quizProgressMap={quizProgressMap}
+          activityLog={currentActivityLog}
+        />
+
+        {routeLoaderPhase !== 'idle' ? (
+          <div
+            className={routeLoaderPhase === 'leaving' ? 'app-route-loader leaving' : 'app-route-loader visible'}
+            role="status"
+            aria-live="polite"
+            aria-label="Loading next section"
+          >
+            <NeuralOrbitLoader />
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+
+  if (activeScreen === 'quiz') {
+    return (
+      <div className="app-wrapper">
+        <header className="navbar">
+          <div className="navbar-brand">DeepNexus</div>
+
+          <nav className="navbar-nav" aria-label="Quiz navigation">
+            <button type="button" className="navbar-nav-item" onClick={goHome}>
+              Home
+            </button>
+            <button type="button" className="navbar-nav-item" onClick={() => transitionTo('module', activeModule)}>
+              Back to Module
+            </button>
+          </nav>
+
+          <div className="navbar-action-group">
+            <button
+              type="button"
+              className="profile-link"
+              onClick={navigateToProfile}
+              aria-label="Open profile"
+              data-tooltip="Profile"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="profile-icon">
+                <path
+                  fill="currentColor"
+                  d="M12 12.2a4.2 4.2 0 1 0-4.2-4.2A4.2 4.2 0 0 0 12 12.2zm0 2.2c-3.42 0-8 1.72-8 5.2V22h16v-.4c0-3.48-4.58-5.2-8-5.2z"
+                />
+              </svg>
+            </button>
+            <a className="github-link" href={GITHUB_URL} target="_blank" rel="noreferrer" aria-label="View on Github" data-tooltip="View on Github">
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="github-icon">
+                <path
+                  fill="currentColor"
+                  d="M12 .5C5.65.5.5 5.66.5 12.03c0 5.1 3.3 9.43 7.88 10.96.58.1.79-.25.79-.56 0-.28-.01-1.01-.02-1.99-3.2.7-3.88-1.54-3.88-1.54-.53-1.35-1.3-1.72-1.3-1.72-1.06-.73.08-.71.08-.71 1.18.08 1.8 1.21 1.8 1.21 1.04 1.8 2.74 1.28 3.4.98.1-.76.41-1.28.74-1.58-2.55-.29-5.24-1.28-5.24-5.67 0-1.25.45-2.28 1.18-3.09-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.16 1.18a10.9 10.9 0 0 1 5.76 0c2.19-1.49 3.16-1.18 3.16-1.18.62 1.58.23 2.75.11 3.04.74.81 1.18 1.84 1.18 3.09 0 4.4-2.69 5.38-5.26 5.67.42.36.79 1.06.79 2.14 0 1.55-.01 2.8-.01 3.18 0 .31.21.67.8.56A11.54 11.54 0 0 0 23.5 12.03C23.5 5.66 18.35.5 12 .5Z"
+                />
+              </svg>
+            </a>
+          </div>
+        </header>
+
+        <QuizPage
+          moduleName={activeModule}
+          moduleDescription={moduleDescription}
+          onBackToModule={() => transitionTo('module', activeModule)}
+          onFinishQuiz={handleQuizFinish}
+        />
+
+        {routeLoaderPhase !== 'idle' ? (
+          <div
+            className={routeLoaderPhase === 'leaving' ? 'app-route-loader leaving' : 'app-route-loader visible'}
+            role="status"
+            aria-live="polite"
+            aria-label="Loading next section"
+          >
+            <NeuralOrbitLoader />
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+
+  if (activeScreen === 'home' && activeModule === null) {
+    return (
+      <div className="app-wrapper">
+        <header className="navbar">
+          <div className="navbar-brand">DeepNexus</div>
+
+          <nav className="navbar-nav" aria-label="Home navigation">
+            <button type="button" className="navbar-nav-item" onClick={() => scrollHomeTo('home-modules')}>
+              Modules
+            </button>
+            <button type="button" className="navbar-nav-item" onClick={() => scrollHomeTo('home-nexusai')}>
+              NexusAI
+            </button>
+            <button type="button" className="navbar-nav-item" onClick={() => scrollHomeTo('home-about')}>
+              About
+            </button>
+          </nav>
+
+          <div className="navbar-action-group">
+            <button
+              type="button"
+              className="profile-link"
+              onClick={navigateToProfile}
+              aria-label="Open profile"
+              data-tooltip="Profile"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="profile-icon">
+                <path
+                  fill="currentColor"
+                  d="M12 12.2a4.2 4.2 0 1 0-4.2-4.2A4.2 4.2 0 0 0 12 12.2zm0 2.2c-3.42 0-8 1.72-8 5.2V22h16v-.4c0-3.48-4.58-5.2-8-5.2z"
+                />
+              </svg>
+            </button>
+            <a className="github-link" href={GITHUB_URL} target="_blank" rel="noreferrer" aria-label="View on Github" data-tooltip="View on Github">
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="github-icon">
               <path
                 fill="currentColor"
                 d="M12 .5C5.65.5.5 5.66.5 12.03c0 5.1 3.3 9.43 7.88 10.96.58.1.79-.25.79-.56 0-.28-.01-1.01-.02-1.99-3.2.7-3.88-1.54-3.88-1.54-.53-1.35-1.3-1.72-1.3-1.72-1.06-.73.08-.71.08-.71 1.18.08 1.8 1.21 1.8 1.21 1.04 1.8 2.74 1.28 3.4.98.1-.76.41-1.28.74-1.58-2.55-.29-5.24-1.28-5.24-5.67 0-1.25.45-2.28 1.18-3.09-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.16 1.18a10.9 10.9 0 0 1 5.76 0c2.19-1.49 3.16-1.18 3.16-1.18.62 1.58.23 2.75.11 3.04.74.81 1.18 1.84 1.18 3.09 0 4.4-2.69 5.38-5.26 5.67.42.36.79 1.06.79 2.14 0 1.55-.01 2.8-.01 3.18 0 .31.21.67.8.56A11.54 11.54 0 0 0 23.5 12.03C23.5 5.66 18.35.5 12 .5Z"
               />
-            </svg>
-          </a>
+              </svg>
+            </a>
+          </div>
         </header>
-        <HomePage menuOpen={menuOpen} onToggleMenu={() => setMenuOpen((prev) => !prev)} onMenuSelect={handleMenuSelect} />
+
+        <HomePage onMenuSelect={handleMenuSelect} quizProgressMap={quizProgressMap} />
+
+        {routeLoaderPhase !== 'idle' ? (
+          <div
+            className={routeLoaderPhase === 'leaving' ? 'app-route-loader leaving' : 'app-route-loader visible'}
+            role="status"
+            aria-live="polite"
+            aria-label="Loading next section"
+          >
+            <NeuralOrbitLoader />
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+
+  if (activeScreen === 'data-engine') {
+    return (
+      <div className="app-wrapper">
+        <header className="navbar">
+          <div className="navbar-brand">DeepNexus</div>
+
+          <nav className="navbar-nav" aria-label="Data Engine navigation">
+            <button type="button" className="navbar-nav-item" onClick={goHome}>
+              Home
+            </button>
+            <button
+              type="button"
+              className="navbar-nav-item"
+              onClick={() => {
+                if (dataEngineReturnModule) {
+                  transitionTo('module', dataEngineReturnModule)
+                  return
+                }
+                goHome()
+              }}
+            >
+              Back to Module
+            </button>
+          </nav>
+
+          <div className="navbar-action-group">
+            <button
+              type="button"
+              className="profile-link"
+              onClick={navigateToProfile}
+              aria-label="Open profile"
+              data-tooltip="Profile"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="profile-icon">
+                <path
+                  fill="currentColor"
+                  d="M12 12.2a4.2 4.2 0 1 0-4.2-4.2A4.2 4.2 0 0 0 12 12.2zm0 2.2c-3.42 0-8 1.72-8 5.2V22h16v-.4c0-3.48-4.58-5.2-8-5.2z"
+                />
+              </svg>
+            </button>
+            <a className="github-link" href={GITHUB_URL} target="_blank" rel="noreferrer" aria-label="View on Github" data-tooltip="View on Github">
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="github-icon">
+                <path
+                  fill="currentColor"
+                  d="M12 .5C5.65.5.5 5.66.5 12.03c0 5.1 3.3 9.43 7.88 10.96.58.1.79-.25.79-.56 0-.28-.01-1.01-.02-1.99-3.2.7-3.88-1.54-3.88-1.54-.53-1.35-1.3-1.72-1.3-1.72-1.06-.73.08-.71.08-.71 1.18.08 1.8 1.21 1.8 1.21 1.04 1.8 2.74 1.28 3.4.98.1-.76.41-1.28.74-1.58-2.55-.29-5.24-1.28-5.24-5.67 0-1.25.45-2.28 1.18-3.09-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.16 1.18a10.9 10.9 0 0 1 5.76 0c2.19-1.49 3.16-1.18 3.16-1.18.62 1.58.23 2.75.11 3.04.74.81 1.18 1.84 1.18 3.09 0 4.4-2.69 5.38-5.26 5.67.42.36.79 1.06.79 2.14 0 1.55-.01 2.8-.01 3.18 0 .31.21.67.8.56A11.54 11.54 0 0 0 23.5 12.03C23.5 5.66 18.35.5 12 .5Z"
+                />
+              </svg>
+            </a>
+          </div>
+        </header>
+
+        <DataEnginePage userName={currentProfile.name} />
+
+        {routeLoaderPhase !== 'idle' ? (
+          <div
+            className={routeLoaderPhase === 'leaving' ? 'app-route-loader leaving' : 'app-route-loader visible'}
+            role="status"
+            aria-live="polite"
+            aria-label="Loading next section"
+          >
+            <NeuralOrbitLoader />
+          </div>
+        ) : null}
       </div>
     )
   }
@@ -4493,8 +7010,24 @@ function App() {
       </div>
 
       <div className={menuOpen ? 'module-content-shell menu-open' : 'module-content-shell'}>
-        <ModulePage activeModule={activeModule} moduleDescription={moduleDescription} />
+        <ModulePage
+          activeModule={activeModule}
+          moduleDescription={moduleDescription}
+          onStartQuiz={navigateToQuiz}
+          quizRecord={quizProgressMap[activeModule]}
+        />
       </div>
+
+      {routeLoaderPhase !== 'idle' ? (
+        <div
+          className={routeLoaderPhase === 'leaving' ? 'app-route-loader leaving' : 'app-route-loader visible'}
+          role="status"
+          aria-live="polite"
+          aria-label="Loading next section"
+        >
+          <NeuralOrbitLoader />
+        </div>
+      ) : null}
     </div>
   )
 }

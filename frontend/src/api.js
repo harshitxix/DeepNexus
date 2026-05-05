@@ -1,19 +1,46 @@
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000/api'
+const PRIMARY_API_BASE = import.meta.env.VITE_API_BASE || '/api'
+const API_BASES = PRIMARY_API_BASE === '/api'
+  ? [PRIMARY_API_BASE, 'http://127.0.0.1:8000/api', 'http://127.0.0.1:8001/api']
+  : [PRIMARY_API_BASE]
 
 async function request(path, options = {}) {
   const isFormData = options.body instanceof FormData
   const baseHeaders = isFormData ? {} : { 'Content-Type': 'application/json' }
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { ...baseHeaders, ...(options.headers || {}) },
-    ...options,
-  })
 
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`API ${res.status}: ${text}`)
+  let lastFetchError = null
+  for (let i = 0; i < API_BASES.length; i += 1) {
+    const base = API_BASES[i]
+    try {
+      const res = await fetch(`${base}${path}`, {
+        headers: { ...baseHeaders, ...(options.headers || {}) },
+        ...options,
+      })
+
+      if (!res.ok) {
+        const text = await res.text()
+        const error = new Error(`API ${res.status}: ${text}`)
+        error.status = res.status
+
+        if (res.status >= 500 && i < API_BASES.length - 1) {
+          lastFetchError = error
+          continue
+        }
+
+        throw error
+      }
+
+      return res.json()
+    } catch (error) {
+      lastFetchError = error
+
+      // Retry only when request itself failed (network/CORS/connection).
+      if (!(error instanceof TypeError) || i === API_BASES.length - 1) {
+        throw error
+      }
+    }
   }
 
-  return res.json()
+  throw lastFetchError || new Error('Unknown API request failure.')
 }
 
 export const api = {
@@ -25,6 +52,7 @@ export const api = {
   rnnInfo: () => request('/rnn/info'),
   rnnGenerateText: (payload) => request('/rnn/generate-text', { method: 'POST', body: JSON.stringify(payload) }),
   rnnAnalyzeEmotion: (payload) => request('/rnn/analyze-emotion', { method: 'POST', body: JSON.stringify(payload) }),
+  studyAssistantAsk: (payload) => request('/study-assistant/ask', { method: 'POST', body: JSON.stringify(payload) }),
   cnnLabInfo: () => request('/cnn-lab/info'),
   cnnLabPredict: (formData) => request('/cnn-lab/predict', { method: 'POST', body: formData }),
   cnnLabFeatureMaps: (formData) => request('/cnn-lab/feature-maps', { method: 'POST', body: formData }),

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="NexusAI">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#4f46e5" />
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="120" fill="url(#g)" />
+  <path d="M74 178V78h22l60 68V78h26v100h-22l-60-68v68H74z" fill="#ffffff" />
+</svg>
