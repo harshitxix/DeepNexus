@@ -4,9 +4,7 @@
   "outputDirectory": "frontend/dist",
   "installCommand": "npm install",
   "env": {
-    "VITE_API_BASE": {
-      "default": "https://deepnexus-api.onrender.com/api"
-    }
+    "VITE_API_BASE": "https://deepnexus-423a.onrender.com/api"
   },
   "functions": {
     "api/**/*.js": {
