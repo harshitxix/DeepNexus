@@ -1,7 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import PlotlyImport from 'plotly.js-dist-min'
 
-const API_BASE = '/api/data-engine'
+function normalizeApiBase(rawBase) {
+  const fallback = '/api'
+  const value = typeof rawBase === 'string' ? rawBase.trim() : ''
+  if (!value) return fallback
+  if (value === '/api') return value
+
+  const withoutTrailingSlash = value.replace(/\/+$/, '')
+  return withoutTrailingSlash.endsWith('/api')
+    ? withoutTrailingSlash
+    : `${withoutTrailingSlash}/api`
+}
+
+const API_BASE = `${normalizeApiBase(import.meta.env.VITE_API_BASE)}/data-engine`
 const Plotly = PlotlyImport?.default || PlotlyImport
 
 function toNumeric(value) {

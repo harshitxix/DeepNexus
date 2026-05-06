@@ -1,6 +1,21 @@
-// In production, VITE_API_BASE must be set to backend URL
-// In development, fallback to relative /api (proxied by vite.config.js)
-const PRIMARY_API_BASE = import.meta.env.VITE_API_BASE || '/api'
+// In production, VITE_API_BASE should point to backend base URL.
+// This normalizer tolerates both forms:
+// - https://service.onrender.com
+// - https://service.onrender.com/api
+// In development, fallback to relative /api (proxied by vite.config.js).
+function normalizeApiBase(rawBase) {
+  const fallback = '/api'
+  const value = typeof rawBase === 'string' ? rawBase.trim() : ''
+  if (!value) return fallback
+  if (value === '/api') return value
+
+  const withoutTrailingSlash = value.replace(/\/+$/, '')
+  return withoutTrailingSlash.endsWith('/api')
+    ? withoutTrailingSlash
+    : `${withoutTrailingSlash}/api`
+}
+
+const PRIMARY_API_BASE = normalizeApiBase(import.meta.env.VITE_API_BASE)
 const API_BASES = PRIMARY_API_BASE === '/api'
   ? [PRIMARY_API_BASE]
   : [PRIMARY_API_BASE]
