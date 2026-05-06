@@ -2,7 +2,7 @@
   "version": 2,
   "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/dist",
-  "installCommand": "npm install",
+  "installCommand": "cd frontend && npm install",
   "env": {
     "VITE_API_BASE": "https://deepnexus-423a.onrender.com/api"
   },
