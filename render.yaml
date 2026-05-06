@@ -3,14 +3,12 @@ services:
     name: deepnexus-backend
     runtime: python
     buildCommand: pip install --prefer-binary -r backend/requirements.txt
-    startCommand: python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+    startCommand: cd backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
     envVars:
       - key: PYTHON_VERSION
         value: 3.11
       - key: PYTHONUNBUFFERED
         value: true
-      - key: PYTHONPATH
-        value: /backend
     scaling:
       minInstances: 1
       maxInstances: 3

@@ -71,7 +71,7 @@ DeepNexus/
 
 | Item | Status | Details |
 |------|--------|---------|
-| **Entry Point** | ✅ Ready | `python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000` |
+| **Entry Point** | ✅ Ready | `cd backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000` |
 | **Build Command** | ✅ Ready | `pip install -r backend/requirements.txt` |
 | **Environment Variables** | ✅ Ready | `.env.example` provides all required keys |
 | **Health Endpoint** | ✅ Ready | `/api/health` → `{"status": "ok"}` |
@@ -82,7 +82,6 @@ DeepNexus/
 **Required Environment Variables:**
 ```
 PYTHONUNBUFFERED=true
-PYTHONPATH=/backend
 DEBUG=false
 ENVIRONMENT=production
 LOG_LEVEL=info
