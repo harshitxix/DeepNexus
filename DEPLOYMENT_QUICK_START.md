@@ -38,11 +38,10 @@
    - Root Directory: . (leave empty)
    - Runtime: Python 3.11
    - Build Command: pip install -r backend/requirements.txt
-   - Start Command: python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+   - Start Command: cd backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 5. Add Environment Variables (click "Add"):
    PYTHONUNBUFFERED=true
-   PYTHONPATH=/backend
    DEBUG=false
    ENVIRONMENT=production
    LOG_LEVEL=info
