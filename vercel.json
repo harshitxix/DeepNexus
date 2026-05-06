@@ -6,11 +6,6 @@
   "env": {
     "VITE_API_BASE": "https://deepnexus-423a.onrender.com/api"
   },
-  "functions": {
-    "api/**/*.js": {
-      "memory": 1024
-    }
-  },
   "rewrites": [
     {
       "source": "/api/(.*)",
