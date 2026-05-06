@@ -1,6 +1,8 @@
+// In production, VITE_API_BASE must be set to backend URL
+// In development, fallback to relative /api (proxied by vite.config.js)
 const PRIMARY_API_BASE = import.meta.env.VITE_API_BASE || '/api'
 const API_BASES = PRIMARY_API_BASE === '/api'
-  ? [PRIMARY_API_BASE, 'http://127.0.0.1:8000/api', 'http://127.0.0.1:8001/api']
+  ? [PRIMARY_API_BASE]
   : [PRIMARY_API_BASE]
 
 async function request(path, options = {}) {
