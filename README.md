@@ -83,13 +83,19 @@ DeepNexus/
 ├── nginx.conf                         # Reverse proxy config
 ├── vercel.json                        # Vercel deployment
 ├── render.yaml                        # Render deployment
-├── deploy.sh                          # Linux/Mac deployment script
-├── deploy.bat                         # Windows deployment script
 ├── .github/workflows/deploy.yml       # CI/CD automation
-├── DEPLOYMENT.md                      # Comprehensive deployment guide
-├── DEPLOYMENT_CHECKLIST.md            # Pre/post deployment checklist
 └── README.md                          # This file
 ```
+
+### Deployment Notes
+
+DeepNexus now uses **Render** for the backend API and **Vercel** for the frontend.
+
+- `render.yaml` controls the backend deploy on Render.
+- `vercel.json` controls the frontend deploy on Vercel.
+- The Docker files are optional and only needed if you want to self-host, test containers locally, or keep a Docker-based deployment path.
+
+If you are only using Render and Vercel, you do not need the Docker-based deployment path for normal production usage.
 
 ---
 
