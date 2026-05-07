@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from fastapi.responses import PlainTextResponse
 
 router = APIRouter()
 
@@ -8,6 +9,6 @@ def health_check() -> dict:
     return {"status": "ok", "service": "deep-learning-api"}
 
 
-@router.get("/ping")
-def ping() -> dict:
-    return {"status": "alive"}
+@router.api_route("/ping", methods=["GET", "HEAD"])
+async def ping():
+    return PlainTextResponse("ok", status_code=200)
