@@ -1,142 +1,181 @@
-# DeepNexus 🧠
+<div align="center">
 
-An interactive deep learning and neural network visualization platform built with React, FastAPI, and Plotly. Learn neural networks through interactive modules, mathematical explanations, and real-time visualizations.
+<br/>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tech Stack](https://img.shields.io/badge/Stack-React%20%2B%20FastAPI-blue)](#tech-stack)
 
----
+#  DeepNexus
 
-## 🚀 Features
+### *Learning Neural Networks, Visualized.*
 
-### Interactive Learning Modules
-- **Perceptron**: Single neuron modeling with activation functions and decision boundaries
-- **Forward Propagation**: Signal flow visualization through network layers
-- **Backward Propagation**: Gradient computation and weight update mechanisms
-- **Multilayer Perceptron (MLP)**: Deep network architecture with training curves
-- **Computer Vision**: Image processing and CNN concepts with visual demonstrations
-- **RNN & LSTM**: Sequence modeling with hidden state evolution visualization
+<br/>
 
-### Study Mode
-Comprehensive learning materials for each topic including:
-- Detailed mathematical formulas and equations
-- Activation function comparisons (Sigmoid, ReLU, Tanh)
-- Interactive graphs and visualizations
-- Real-world applications and best practices
-- Implementation guidance with code examples
+[![Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-deep--nexus--three.vercel.app-6366f1?style=for-the-badge&logoColor=white)](https://deep-nexus-three.vercel.app/)
+&nbsp;
+[![License: MIT](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](https://opensource.org/licenses/MIT)
+&nbsp;
+[![React](https://img.shields.io/badge/React-19-38bdf8?style=for-the-badge&logo=react)](https://react.dev/)
+&nbsp;
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
 
-### Advanced Visualizations
-- **Plotly-based graphs** for interactive exploration
-- **Network signal diagrams** showing data flow
-- **Gradient decay visualization** demonstrating vanishing/exploding gradients
-- **Training curves** tracking accuracy and loss
-- **Decision boundaries** for classification tasks
-- **Memory persistence graphs** for RNN/LSTM modules
+<br/>
+
+> An interactive deep learning and neural network visualization platform.
+> Learn complex AI concepts through real-time visualizations, mathematical breakdowns, and hands-on experimentation.
+
+<br/>
 
 ---
 
-## 📋 Project Structure
+</div>
+
+<br/>
+
+## ✦ What is DeepNexus?
+
+DeepNexus is an **educational visualization platform** for deep learning and neural networks. Instead of reading static textbooks, you interact — adjust weights, watch gradients flow, train networks in your browser, and see the math come alive. Built for students, educators, and curious minds.
+
+<br/>
+
+---
+
+## ◈ Interactive Learning Modules
+
+<br/>
+
+| Module | Description |
+|--------|-------------|
+| 🔵 **Perceptron** | Single neuron modeling with activation functions and live decision boundaries |
+| ➡️ **Forward Propagation** | Signal flow visualization through network layers, step by step |
+| ⬅️ **Backward Propagation** | Gradient computation, weight updates, and vanishing gradient demos |
+| 🧠 **Multilayer Perceptron** | Deep network architecture with live training curves |
+| 👁️ **Computer Vision** | Image processing, convolution, and CNN concepts with visual demos |
+| 🔄 **RNN & LSTM** | Sequence modeling with hidden state evolution and memory visualization |
+
+<br/>
+
+---
+
+## ◈ Study Mode
+
+Each module ships with a full **Study Mode** — a curated learning companion that includes:
+
+- 📐 Mathematical formulas and step-by-step derivations
+- 📊 Activation function comparisons — Sigmoid, ReLU, Tanh
+- 🧩 Interactive graphs and visual explainers
+- 🌍 Real-world use cases and applications
+- 💻 Code examples and implementation guidance
+
+<br/>
+
+---
+
+## ◈ Visualizations
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Plotly Interactive Graphs   │  Network Signal Diagrams  │
+│  Gradient Decay Curves       │  Decision Boundaries      │
+│  Training Accuracy & Loss    │  Memory Persistence (RNN) │
+└─────────────────────────────────────────────────────────┘
+```
+
+<br/>
+
+---
+
+## ◈ Tech Stack
+
+<div align="center">
+
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | React 19 + Vite 8 |
+| **Styling** | CSS3, GSAP, Motion |
+| **Visualizations** | Plotly.js, React-Plotly |
+| **Backend** | FastAPI + Uvicorn |
+| **Computation** | NumPy, OpenCV |
+| **Deployment** | Vercel (Frontend) + Render (Backend) |
+
+</div>
+
+<br/>
+
+---
+
+## ◈ Project Structure
 
 ```
 DeepNexus/
-├── frontend/                          # React + Vite SPA
-│   ├── src/
-│   │   ├── App.jsx                   # Main app component
-│   │   ├── App.css                   # Global styles
-│   │   ├── api.js                    # API client
-│   │   ├── components/               # Reusable UI components
-│   │   ├── ElasticSlider.jsx         # Custom slider
-│   │   ├── ShinyText.jsx             # Text animations
-│   │   ├── StaggeredMenu.jsx         # Menu animations
-│   │   ├── PillNav.jsx               # Navigation pills
-│   │   ├── VariableProximity.jsx     # Proximity effects
-│   │   └── assets/                   # Media files
-│   ├── package.json
-│   ├── vite.config.js
-│   └── index.html
 │
-├── backend/                           # FastAPI server
+├── frontend/                        ← React + Vite SPA
+│   ├── src/
+│   │   ├── App.jsx                  ← Main app component
+│   │   ├── api.js                   ← API client
+│   │   ├── components/              ← Reusable UI components
+│   │   ├── ElasticSlider.jsx
+│   │   ├── ShinyText.jsx
+│   │   ├── StaggeredMenu.jsx
+│   │   ├── PillNav.jsx
+│   │   └── VariableProximity.jsx
+│   ├── package.json
+│   └── vite.config.js
+│
+├── backend/                         ← FastAPI Server
 │   ├── app/
-│   │   ├── main.py                   # App entry point
-│   │   ├── routers/                  # API route handlers
+│   │   ├── main.py                  ← App entry point
+│   │   ├── routers/                 ← API route handlers
 │   │   │   ├── perceptron.py
 │   │   │   ├── forward_prop.py
 │   │   │   ├── backward_prop.py
 │   │   │   ├── mlp.py
 │   │   │   ├── opencv.py
-│   │   │   ├── rnn.py
-│   │   │   └── health.py
-│   │   ├── services/                 # Business logic
+│   │   │   └── rnn.py
+│   │   ├── services/                ← Business logic
 │   │   │   ├── perceptron_service.py
 │   │   │   ├── forward_service.py
 │   │   │   ├── backward_service.py
 │   │   │   ├── mlp_service.py
-│   │   │   ├── rnn_service.py
-│   │   │   └── math_utils.py
-│   │   ├── schemas/                  # Data models
-│   │   └── __init__.py
-│   ├── requirements.txt
-│   └── legacy_streamlit/             # Archive (previous version)
+│   │   │   └── rnn_service.py
+│   │   └── schemas/                 ← Data models
+│   └── requirements.txt
 │
-├── Dockerfile                         # Docker containerization
-├── docker-compose.yml                # Multi-container setup
-├── nginx.conf                         # Reverse proxy config
-├── vercel.json                        # Vercel deployment
-├── render.yaml                        # Render deployment
-├── .github/workflows/deploy.yml       # CI/CD automation
-└── README.md                          # This file
+├── Dockerfile
+├── docker-compose.yml
+├── nginx.conf
+├── vercel.json
+├── render.yaml
+└── .github/workflows/deploy.yml
 ```
 
-### Deployment Notes
-
-DeepNexus now uses **Render** for the backend API and **Vercel** for the frontend.
-
-- `render.yaml` controls the backend deploy on Render.
-- `vercel.json` controls the frontend deploy on Vercel.
-- The Docker files are optional and only needed if you want to self-host, test containers locally, or keep a Docker-based deployment path.
-
-If you are only using Render and Vercel, you do not need the Docker-based deployment path for normal production usage.
+<br/>
 
 ---
 
-## 🛠️ Tech Stack
-
-| Component | Technology |
-|-----------|-----------|
-| **Frontend** | React 19 + Vite 8 |
-| **Styling** | CSS3 with animations (GSAP, Motion) |
-| **Visualizations** | Plotly.js, React-Plotly |
-| **Backend** | FastAPI, Uvicorn |
-| **Computation** | NumPy, OpenCV |
-| **CLI** | PowerShell / Bash |
-
----
-
-## 📦 Installation
+## ◈ Getting Started
 
 ### Prerequisites
-- **Node.js** 18+ (for frontend)
-- **Python** 3.11+ (for backend)
-- **npm** or **yarn** (for dependency management)
-- **Git** (for version control)
 
-### Clone Repository
+```
+Node.js 18+   ·   Python 3.11+   ·   npm or yarn   ·   Git
+```
+
+### 1 — Clone the Repository
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/deepnexus.git
 cd DeepNexus
 ```
 
-### Backend Setup
+### 2 — Backend Setup
 
 ```bash
-# Create Python virtual environment
+# Create and activate virtual environment
 python -m venv venv
 
-# Activate virtual environment
-# On Windows:
+# Windows
 .\venv\Scripts\Activate.ps1
-# On Linux/Mac:
+
+# Linux / macOS
 source venv/bin/activate
 
 # Install dependencies
@@ -145,7 +184,7 @@ pip install -r requirements.txt
 cd ..
 ```
 
-### Frontend Setup
+### 3 — Frontend Setup
 
 ```bash
 cd frontend
@@ -153,314 +192,295 @@ npm install
 cd ..
 ```
 
+<br/>
+
 ---
 
-## 🚀 Running Locally
+## ◈ Running Locally
 
-### Option 1: Separate Terminals
+### Option A — Separate Terminals
 
-**Terminal 1 - Backend:**
 ```bash
+# Terminal 1 — Backend
 cd backend
-$env:PYTHONPATH="$PWD"
 python -m uvicorn app.main:app --reload --port 8000
-```
 
-**Terminal 2 - Frontend:**
-```bash
+# Terminal 2 — Frontend
 cd frontend
 npm run dev
 ```
 
-**Access:** http://localhost:5173
+> Open **http://localhost:5173** in your browser.
 
-### Option 2: Docker Compose
+### Option B — Docker Compose
 
 ```bash
 docker-compose up --build
 ```
 
-**Access:** http://localhost (Nginx proxy)
+> Open **http://localhost** (via Nginx reverse proxy).
 
-### Option 3: Docker (Single Container)
+### Option C — Single Docker Container
 
 ```bash
 docker build -t deepnexus .
 docker run -p 8000:8000 deepnexus
 ```
 
----
-
-## 📡 API Endpoints
-
-### Health Check
-- `GET /api/health` - Server health status
-
-### Perceptron Module
-- `POST /api/perceptron/predict` - Single neuron prediction with activation
-
-### Forward Propagation
-- `POST /api/forward/run` - Forward pass through network layers
-
-### Backward Propagation
-- `POST /api/backward/step` - Gradient computation and backprop step
-
-### MLP (Multilayer Perceptron)
-- `POST /api/mlp/summary` - Network configuration and parameter analysis
-- `POST /api/mlp/train` - Training on truth tables (AND, OR, XOR)
-
-### Computer Vision
-- `GET /api/opencv/info` - Available CV operations
-- `POST /api/opencv/process` - Image processing operations
-
-### RNN & LSTM
-- `POST /api/rnn/sentiment` - Sentiment analysis on text input
-- `POST /api/rnn/state` - Hidden state evolution tracking
-
-### Swagger Documentation
-- `http://localhost:8000/docs` - Interactive API documentation
+<br/>
 
 ---
 
-## 🎓 Study Mode Content
+## ◈ API Endpoints
 
-The Study Mode provides comprehensive learning material for each topic:
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/health` | Server health check |
+| `POST` | `/api/perceptron/predict` | Single neuron prediction |
+| `POST` | `/api/forward/run` | Forward pass through layers |
+| `POST` | `/api/backward/step` | Gradient computation + backprop |
+| `POST` | `/api/mlp/summary` | Network config and parameter count |
+| `POST` | `/api/mlp/train` | Train on AND / OR / XOR truth tables |
+| `GET` | `/api/opencv/info` | Available CV operations |
+| `POST` | `/api/opencv/process` | Image processing operations |
+| `POST` | `/api/rnn/sentiment` | Sentiment analysis on text |
+| `POST` | `/api/rnn/state` | Hidden state evolution tracking |
 
-### Perceptron
-- Biological inspiration and model definition
-- Activation functions (Sigmoid, ReLU, Tanh)
-- Decision boundaries and classification
-- Implementation with TensorFlow
+> Interactive Swagger docs available at **`http://localhost:8000/docs`**
 
-### Forward Propagation
-- Layer-by-layer signal flow
-- Mathematical formulation: `A⁽ⁿ⁾ = σ(W⁽ⁿ⁾A⁽ⁿ⁻¹⁾ + b⁽ⁿ⁾)`
-- Pre-activation (Z) and post-activation (A) values
+<br/>
+
+---
+
+## ◈ Study Mode — Topics Covered
+
+<details>
+<summary><b>🔵 Perceptron</b></summary>
+<br/>
+
+- Biological inspiration and neuron model
+- Activation functions: Sigmoid, ReLU, Tanh
+- Decision boundaries and binary classification
+- TensorFlow implementation walkthrough
+
+</details>
+
+<details>
+<summary><b>➡️ Forward Propagation</b></summary>
+<br/>
+
+- Layer-by-layer signal flow breakdown
+- Formula: `A⁽ⁿ⁾ = σ(W⁽ⁿ⁾A⁽ⁿ⁻¹⁾ + b⁽ⁿ⁾)`
+- Pre-activation (Z) vs post-activation (A) values
 - Practical implementation guidance
 
-### Backward Propagation
+</details>
+
+<details>
+<summary><b>⬅️ Backward Propagation</b></summary>
+<br/>
+
 - Chain rule and gradient computation
 - Error propagation through layers
 - Weight update mechanisms
-- Vanishing/exploding gradient problem
-- Solutions: initialization, ReLU, batch norm
+- Vanishing & exploding gradient problem
+- Solutions: smart initialization, ReLU, batch normalization
 
-### Multilayer Perceptron
-- Fully connected architecture
+</details>
+
+<details>
+<summary><b>🧠 Multilayer Perceptron</b></summary>
+<br/>
+
+- Fully connected network architecture
 - Parameter growth analysis
-- Loss functions (BCE, MSE, MAE)
-- Optimization algorithms (SGD, Adam)
-- Training dynamics and convergence
+- Loss functions: BCE, MSE, MAE
+- Optimizers: SGD, Adam
+- Training dynamics and convergence behavior
 
-### Computer Vision
+</details>
+
+<details>
+<summary><b>👁️ Computer Vision</b></summary>
+<br/>
+
 - Image transformations and enhancement
-- Convolution and filtering
-- Feature extraction (edges, corners, SIFT)
+- Convolution, filtering, and feature extraction
+- Edge detection, corner detection, SIFT
 - Morphological operations
-- Deep learning models (CNN, GAN, VAE, ViT)
+- Deep learning architectures: CNN, GAN, VAE, ViT
 
-### RNN & LSTM
-- Sequential processing and memory
-- Recurrent equations and unrolling
+</details>
+
+<details>
+<summary><b>🔄 RNN & LSTM</b></summary>
+<br/>
+
+- Sequential processing and memory mechanisms
+- Recurrent equations and network unrolling
 - Backpropagation through time (BPTT)
-- Gated architectures (LSTM, GRU)
-- Applications in NLP and time series
+- Gated architectures: LSTM, GRU
+- NLP and time-series applications
+
+</details>
+
+<br/>
 
 ---
 
-## 🧪 Module Details
+## ◈ Deployment
 
-Each module provides:
-1. **Interactive controls** for parameter adjustment
-2. **Real-time visualizations** using Plotly
-3. **Numerical outputs** showing computed values
-4. **Mathematical explanations** of underlying algorithms
-5. **Best practices** and common pitfalls
+DeepNexus uses **Vercel** for the frontend and **Render** for the backend API.
 
-### Perceptron Example
-```javascript
-// Input: 2D features and weights
-// Output: Binary classification with decision boundary
-// Visualization: Sigmoid activation curve + contour plot
+```
+Frontend → Vercel      (controlled via vercel.json)
+Backend  → Render      (controlled via render.yaml)
+Docker   → Optional    (for self-hosting or local container testing)
 ```
 
-### MLP Example
-```javascript
-// Input: Network architecture (3 hidden layers)
-// Output: Parameter count, training curves
-// Visualization: Loss and accuracy over epochs
-```
+### Environment Variables
 
----
-
-## 🐳 Docker Deployment
-
-### Build Image
-```bash
-docker build -t deepnexus:latest .
-```
-
-### Run Locally
-```bash
-docker run -p 8000:8000 deepnexus:latest
-```
-
-### Push to Docker Hub
-```bash
-docker tag deepnexus:latest YOUR_USERNAME/deepnexus:latest
-docker push YOUR_USERNAME/deepnexus:latest
-```
-
-### Docker Compose
-```bash
-docker-compose up --build
-```
-
----
-
-## 🌐 Deployment Options
-
-### Recommended: Vercel (Frontend) + Railway (Backend)
-- **Setup time:** 15 minutes
-- **Cost:** Free tier available
-- **Scalability:** Excellent
-- Details: See [DEPLOYMENT.md](./DEPLOYMENT.md)
-
-### Docker on AWS/DigitalOcean
-- **Setup time:** 30-45 minutes
-- **Cost:** ~$5/month
-- **Control:** Full server access
-- Details: See [DEPLOYMENT.md](./DEPLOYMENT.md)
-
-### Render.com (All-in-One)
-- **Setup time:** 10 minutes
-- **Cost:** Free tier available
-- **Ease:** Very simple
-- Details: See [DEPLOYMENT.md](./DEPLOYMENT.md)
-
-### GitHub Actions CI/CD
-Automated deployment on every push to main:
-```bash
-# Builds Docker image and pushes to registry
-# See .github/workflows/deploy.yml
-```
-
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for step-by-step guides and [DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md) for pre/post-deployment verification.
-
----
-
-## 🔧 Configuration
-
-### Frontend Environment Variables
-Create `frontend/.env.production`:
+**Frontend** — create `frontend/.env.production`:
 ```env
 VITE_API_URL=https://your-backend-domain.com
 VITE_ENABLE_STUDY_MODE=true
 ```
 
-### Backend Environment Variables
-Create `backend/.env`:
+**Backend** — create `backend/.env`:
 ```env
 DEBUG=false
 CORS_ORIGINS=https://your-frontend-domain.com
 LOG_LEVEL=info
 ```
 
-See `.env.example` files for complete configurations.
+<br/>
 
 ---
 
-## 📚 Learning Resources
+## ◈ Troubleshooting
 
-- [Deep Learning Book](http://deeplearningbook.org/) - Ian Goodfellow, Yoshua Bengio
-- [Neural Networks Explained](https://colah.github.io/) - Chris Olah's Blog
-- [Backpropagation Derivation](https://medium.com/analytics-vidhya/understanding-backpropagation-85a5b4f72ae6)
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [React Documentation](https://react.dev/)
+<details>
+<summary><b>Frontend not connecting to backend</b></summary>
+<br/>
 
----
-
-## 🤝 Contributing
-
-Contributions welcome! Follow these steps:
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
----
-
-## 📝 License
-
-This project is licensed under the MIT License - see LICENSE file for details.
-
----
-
-## 🐛 Troubleshooting
-
-### Frontend not connecting to backend
 ```bash
-# Check backend is running on port 8000
+# Confirm backend is running
 curl http://localhost:8000/api/health
 
-# Update VITE_API_URL in frontend/.env
+# Then update your frontend env
+# frontend/.env → VITE_API_URL=http://localhost:8000
 ```
 
-### Docker build fails
-```bash
-# Clear Docker cache
-docker system prune -a
+</details>
 
-# Rebuild
+<details>
+<summary><b>Docker build fails</b></summary>
+<br/>
+
+```bash
+# Clear Docker cache and rebuild
+docker system prune -a
 docker build -t deepnexus .
 ```
 
-### Port already in use
+</details>
+
+<details>
+<summary><b>Port already in use</b></summary>
+<br/>
+
 ```bash
 # Find process using port 8000
 netstat -ano | findstr :8000
 
-# Kill process (Windows)
+# Kill it (Windows)
 taskkill /PID <PID> /F
 ```
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for more troubleshooting guides.
+</details>
+
+<br/>
 
 ---
 
-## 📧 Support & Contact
+## ◈ Roadmap
 
-- GitHub Issues: [Report bugs](https://github.com/YOUR_USERNAME/deepnexus/issues)
-- Email: your-email@example.com
-- Documentation: See [DEPLOYMENT.md](./DEPLOYMENT.md) and [DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md)
+```
+✅ 6 core interactive modules
+✅ Study Mode with math and code
+✅ FastAPI backend with Plotly visualizations
+✅ Docker + CI/CD pipeline
+✅ Vercel + Render deployment
 
----
+⬜ GPU acceleration for larger networks
+⬜ Database for saving training sessions
+⬜ User authentication and profiles
+⬜ Advanced visualization modes
+⬜ Mobile-responsive design improvements
+⬜ Multi-language support
+⬜ Video tutorial integration
+⬜ Jupyter notebook embedding
+```
 
-## 🎯 Roadmap
-
-- [ ] GPU acceleration for larger networks
-- [ ] Database for storing training sessions
-- [ ] User authentication and profiles
-- [ ] Advanced visualization modes
-- [ ] Mobile responsive design improvements
-- [ ] Multi-language support
-- [ ] Video tutorials
-- [ ] Jupyter notebook integration
-
----
-
-## ✨ Highlights
-
-- **Educational:** Learn deep learning through interactive visualization
-- **Modern Stack:** React + FastAPI + Plotly for seamless experience
-- **Production-Ready:** Docker, CI/CD, multiple deployment options
-- **Comprehensive:** 6 major modules + study mode + API documentation
-- **Open Source:** MIT licensed, community contributions welcome
+<br/>
 
 ---
 
-Made with ❤️ for deep learning enthusiasts and students
+## ◈ Contributing
 
-**DeepNexus** - Learning Neural Networks, Visualized.
+Contributions are warmly welcome.
+
+```bash
+# 1. Fork the repository
+# 2. Create your feature branch
+git checkout -b feature/your-feature-name
+
+# 3. Commit your changes
+git commit -m "feat: add your feature"
+
+# 4. Push and open a Pull Request
+git push origin feature/your-feature-name
+```
+
+<br/>
+
+---
+
+## ◈ Learning Resources
+
+- 📖 [Deep Learning Book](http://deeplearningbook.org/) — Goodfellow, Bengio, Courville
+- ✍️ [Chris Olah's Blog](https://colah.github.io/) — Visual explanations of neural nets
+- 🔢 [Backpropagation Derivation](https://medium.com/analytics-vidhya/understanding-backpropagation-85a5b4f72ae6)
+- ⚡ [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- ⚛️ [React Documentation](https://react.dev/)
+
+<br/>
+
+---
+
+## ◈ License
+
+This project is licensed under the **MIT License** — see the [LICENSE](./LICENSE) file for details.
+
+<br/>
+
+---
+
+<div align="center">
+
+```
+╔══════════════════════════════════════════╗
+║   Built for deep learning enthusiasts    ║
+║   and students who learn by doing.       ║
+╚══════════════════════════════════════════╝
+```
+
+[![Live Demo](https://img.shields.io/badge/🌐%20Try%20It%20Live-deep--nexus--three.vercel.app-6366f1?style=for-the-badge)](https://deep-nexus-three.vercel.app/)
+
+<br/>
+
+**DeepNexus** — *Learning Neural Networks, Visualized.*
+
+Made with ❤️ for the open-source community
+
+</div>
